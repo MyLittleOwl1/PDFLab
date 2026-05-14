@@ -386,56 +386,315 @@ input[type="number"] {
     background: #1e7e34;
 }
 
-/* MEDIA QUERIES GLOBALES */
-@media (max-width: 600px) {
-    header {
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    h1 {
-        font-size: 24px;
-    }
-    .theme-toggle {
-        right: 15px;
-    }
-    .grid-container {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 15px;
-    }
-    .card {
-        padding: 20px 15px;
-        min-height: 180px;
-    }
-    .icon-container {
-        width: 50px;
-        height: 50px;
-        border-radius: 14px;
-    }
-    .card svg {
-        width: 26px;
-        height: 26px;
-    }
-    .card h2 {
-        font-size: 16px;
-    }
-    .card p {
-        display: none;
-    }
-    #dropzone, .panel, #fileList {
-        width: 100%;
-    }
-    #dropzone {
-        padding: 30px 15px;
-        font-size: 16px;
-    }
-    .panel, #fileList {
-        padding: 15px;
-    }
-    #actionBtn, #mergeBtn {
-        width: 100%;
-        font-size: 18px;
-    }
-    .back-link-container {
-        width: 100%;
-    }
+/* Estilos de ExtraerTexto.html */
+#textOutput {
+    width: 100%;
+    min-height: 300px;
+    max-height: 500px;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--file-item-border);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    resize: vertical;
+    box-sizing: border-box;
+    margin-top: 15px;
+}
+
+.action-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 2px solid var(--accent-color, #4a90d9);
+    color: var(--accent-color, #4a90d9);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.btn-secondary:hover {
+    background: var(--accent-color, #4a90d9);
+    color: #fff;
+}
+
+#copyFeedback {
+    font-size: 13px;
+    color: #28a745;
+    align-self: center;
+    display: none;
+}
+
+.page-separator {
+    color: #aaa;
+}
+
+/* Estilos de GirarPDF.html */
+#previewPanel {
+    display: none;
+    margin-top: 20px;
+}
+#previewPanel .preview-inner {
+    border: 1px solid var(--file-item-border);
+    border-radius: 10px;
+    padding: 16px;
+    background: var(--panel-bg);
+    text-align: center;
+}
+#previewPanel h3 {
+    color: var(--h1-color);
+    margin-bottom: 12px;
+}
+#previewCanvas {
+    max-width: 100%;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+#previewPanel p {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-top: 8px;
+    color: var(--text-color);
+}
+.preview-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 16px;
+}
+.btn-download {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-cancel {
+    background: transparent;
+    border: 2px solid var(--file-item-border);
+    color: var(--text-color);
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+/* Estilos de MarcaAgua.html */
+.options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.option-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--h1-color);
+}
+
+select,
+input[type="text"],
+input[type="number"],
+input[type="color"] {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--file-item-border);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 15px;
+    width: 100%;
+}
+
+#previewPanel {
+    display: none;
+    margin-top: 20px;
+}
+
+#previewPanel .preview-inner {
+    border: 1px solid var(--file-item-border);
+    border-radius: 10px;
+    padding: 16px;
+    background: var(--panel-bg);
+    text-align: center;
+}
+
+#previewCanvas {
+    max-width: 100%;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Estilos de NumerarPDF.html */
+.options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.option-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--h1-color);
+}
+
+select,
+input[type="text"],
+input[type="number"],
+input[type="color"] {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--file-item-border);
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 15px;
+    width: 100%;
+}
+
+#previewPanel {
+    display: none;
+    margin-top: 20px;
+}
+
+#previewPanel .preview-inner {
+    border: 1px solid var(--file-item-border);
+    border-radius: 10px;
+    padding: 16px;
+    background: var(--panel-bg);
+    text-align: center;
+}
+
+#previewCanvas {
+    max-width: 100%;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Estilos de UnirPDF.html */
+#list li {
+    cursor: grab;
+    transition: opacity 0.2s, transform 0.15s;
+}
+#list li.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+#list li.drag-over-li {
+    border-color: var(--accent-color, #4a90d9);
+    border-style: dashed;
+    transform: scale(1.01);
+}
+.drag-handle-icon {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    opacity: 0.8;
+    cursor: grab;
+    user-select: none;
+    min-width: 24px;
+    color: var(--accent-color, #007bff);
+}
+.drag-handle-icon svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+#list li:hover .drag-handle-icon {
+    opacity: 1;
+}
+#progressText {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--text-color);
+    opacity: 0.8;
+    display: none;
+}
+.hint-text {
+    font-size: 12px;
+    opacity: 0.55;
+    color: var(--text-color);
+    margin-top: 6px;
+    margin-bottom: 0;
+    text-align: center;
+}
+
+/* Estilos de EliminarPDF.html */
+#previewPanel {
+    display: none;
+    margin-top: 20px;
+}
+#previewPanel .preview-inner {
+    border: 1px solid var(--file-item-border);
+    border-radius: 10px;
+    padding: 16px;
+    background: var(--panel-bg);
+    text-align: center;
+}
+#previewPanel h3 {
+    color: var(--h1-color);
+    margin-bottom: 12px;
+}
+#previewCanvas {
+    max-width: 100%;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+#previewPanel p {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-top: 8px;
+    color: var(--text-color);
+}
+.preview-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 16px;
+}
+.btn-download {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-cancel {
+    background: transparent;
+    border: 2px solid var(--file-item-border);
+    color: var(--text-color);
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
 }
