@@ -13,59 +13,6 @@
     <link rel="stylesheet" href="styles.css">
     <script src="theme.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';</script>
-    <style>
-        #previewPanel {
-            display: none;
-            margin-top: 20px;
-        }
-        #previewPanel .preview-inner {
-            border: 1px solid var(--file-item-border);
-            border-radius: 10px;
-            padding: 16px;
-            background: var(--panel-bg);
-            text-align: center;
-        }
-        #previewPanel h3 {
-            color: var(--h1-color);
-            margin-bottom: 12px;
-        }
-        #previewCanvas {
-            max-width: 100%;
-            border-radius: 6px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        }
-        #previewPanel p {
-            font-size: 12px;
-            opacity: 0.6;
-            margin-top: 8px;
-            color: var(--text-color);
-        }
-        .preview-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            margin-top: 16px;
-        }
-        .btn-download {
-            background: linear-gradient(135deg, #28a745, #1e7e34);
-            color: #fff;
-            border: none;
-            padding: 12px 28px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .btn-cancel {
-            background: transparent;
-            border: 2px solid var(--file-item-border);
-            color: var(--text-color);
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 15px;
-            cursor: pointer;
-        }
-    </style>
 </head>
 
 <body>

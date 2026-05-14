@@ -15,61 +15,6 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
     </script>
-
-    <style>
-        #textOutput {
-            width: 100%;
-            min-height: 300px;
-            max-height: 500px;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid var(--file-item-border);
-            background: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
-            line-height: 1.7;
-            resize: vertical;
-            box-sizing: border-box;
-            margin-top: 15px;
-        }
-
-        .action-row {
-            display: flex;
-            gap: 12px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-
-        .btn-secondary {
-            background: transparent;
-            border: 2px solid var(--accent-color, #4a90d9);
-            color: var(--accent-color, #4a90d9);
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s, color 0.2s;
-        }
-
-        .btn-secondary:hover {
-            background: var(--accent-color, #4a90d9);
-            color: #fff;
-        }
-
-        #copyFeedback {
-            font-size: 13px;
-            color: #28a745;
-            align-self: center;
-            display: none;
-        }
-
-        .page-separator {
-            color: #aaa;
-            font-size: 12px;
-        }
-    </style>
 </head>
 
 <body>
