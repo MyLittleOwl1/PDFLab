@@ -91,3 +91,10 @@ self.addEventListener('fetch', (event) => {
         })
     );
 });
+
+// Asegurar que el SW se actualiza correctamente
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});

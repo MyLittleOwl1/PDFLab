@@ -39,5 +39,6 @@
             "url": "./GirarPDF.html",
             "description": "Rota las páginas de un PDF"
         }
-    ]
+    ],
+    "prefer_related_applications": false
 }
