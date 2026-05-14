@@ -95,9 +95,12 @@ h1 {
     text-align: center;
 }
 
+/* Ajustar posición del botón de cambio de tema */
 .theme-toggle {
-    position: absolute;
-    right: 40px;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
     background: none;
     border: 1px solid var(--toggle-border);
     color: var(--h1-color);
