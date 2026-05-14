@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF a Imágenes en el Navegador</title>
+
+    <!-- JSZip para empaquetar las imágenes -->
+    <script src="jszip.min.js"></script>
+    <!-- PDF.js para renderizar PDF a Canvas -->
+    <script src="pdf.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+    <script src="theme.js"></script>
+
+    <script>
+        // Configurar la ruta del worker local para PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+    </script>
+</head>
+
+<body>
+
+    <header>
+        <h1>PDF a Imágenes</h1>
+        <button class="theme-toggle" id="themeToggle" title="Alternar modo oscuro">
+            <!-- Icono de luna por defecto -->
+            <svg id="moonIcon" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <!-- Icono de sol (oculto por defecto) -->
+            <svg id="sunIcon" viewBox="0 0 24 24" style="display: none;">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="back-link-container">
+            <a href="index.html" class="back-link">
+                <svg viewBox="0 0 24 24">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al menú
+            </a>
+        </div>
+
+        <div id="dropzone">
+            Arrastra y suelta tu archivo PDF aquí<br>o haz clic para seleccionar
+            <input type="file" id="fileInput" accept="application/pdf" style="display: none;">
+        </div>
+
+        <div id="optionsPanel" class="panel" style="display: none;">
+            <div class="file-item">
+                <span id="fileNameDisplay">documento.pdf</span>
+                <span style="font-size: 14px; opacity: 0.8; margin-left: auto; margin-right: 15px;" id="pageCountDisplay"></span>
+                <button class="delete-btn" id="removeFileBtn" title="Eliminar archivo">X</button>
+            </div>
+
+            <div style="margin-top: 20px; border-top: 1px solid var(--file-item-border); padding-top: 15px;">
+                <h3 style="margin-bottom: 15px; color: var(--h1-color);">1. Formato de Imagen</h3>
+                <label class="radio-label">
+                    <input type="radio" name="imageFormat" value="image/jpeg" checked>
+                    JPG (Menor peso, recomendado)
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="imageFormat" value="image/png">
+                    PNG (Alta calidad, sin pérdida)
+                </label>
+            </div>
+
+            <div style="margin-top: 20px; border-top: 1px solid var(--file-item-border); padding-top: 15px;">
+                <h3 style="margin-bottom: 15px; color: var(--h1-color);">2. Calidad (Resolución)</h3>
+                <label class="radio-label">
+                    <input type="radio" name="imageQuality" value="1">
+                    Estándar (1x)
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="imageQuality" value="2" checked>
+                    Alta (2x) - Recomendada
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="imageQuality" value="3">
+                    Máxima (3x) - Archivos más pesados
+                </label>
+            </div>
+        </div>
+
+        <button id="actionBtn" style="display: none;">Extraer Imágenes y Descargar ZIP</button>
+        <div id="progressText" style="display: none; text-align: center; margin-top: 15px; color: var(--text-color);"></div>
+    </div>
+
+    <script>
+        // --- PDF a Imágenes Logic ---
+        const dropzone = document.getElementById("dropzone");
+        const fileInput = document.getElementById("fileInput");
+        const optionsPanel = document.getElementById("optionsPanel");
+        const fileNameDisplay = document.getElementById("fileNameDisplay");
+        const removeFileBtn = document.getElementById("removeFileBtn");
+        const actionBtn = document.getElementById("actionBtn");
+        const pageCountDisplay = document.getElementById("pageCountDisplay");
+        const progressText = document.getElementById("progressText");
+
+        let currentFile = null;
+        let pdfDocument = null;
+
+        // Eventos del Dropzone
+        dropzone.addEventListener("click", () => fileInput.click());
+        dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+        dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+        dropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropzone.classList.remove("dragover");
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener("change", (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+
+        async function handleFile(file) {
+            if (file.type !== "application/pdf") {
+                alert("Por favor, sube solo archivos PDF.");
+                return;
+            }
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                
+                // Usamos PDF.js para cargar el documento y leer la cantidad de páginas
+                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                pdfDocument = await loadingTask.promise;
+                
+                currentFile = file;
+
+                // Actualizar UI
+                fileNameDisplay.textContent = file.name;
+                pageCountDisplay.textContent = `(${pdfDocument.numPages} páginas)`;
+                
+                dropzone.style.display = "none";
+                optionsPanel.style.display = "block";
+                actionBtn.style.display = "block";
+                progressText.style.display = "none";
+
+            } catch (error) {
+                alert("Error al leer el PDF. Puede que esté protegido con contraseña o corrupto.");
+                console.error(error);
+            }
+        }
+
+        removeFileBtn.addEventListener("click", () => {
+            currentFile = null;
+            pdfDocument = null;
+            fileInput.value = "";
+            dropzone.style.display = "block";
+            optionsPanel.style.display = "none";
+            actionBtn.style.display = "none";
+            progressText.style.display = "none";
+        });
+
+        // Extraer imágenes y crear ZIP
+        actionBtn.addEventListener("click", async () => {
+            if (!pdfDocument) return;
+
+            const format = document.querySelector('input[name="imageFormat"]:checked').value; // 'image/jpeg' o 'image/png'
+            const extension = format === 'image/jpeg' ? 'jpg' : 'png';
+            const scale = parseFloat(document.querySelector('input[name="imageQuality"]:checked').value);
+
+            actionBtn.disabled = true;
+            progressText.style.display = "block";
+            progressText.textContent = `Iniciando proceso... (0 / ${pdfDocument.numPages})`;
+
+            try {
+                const zip = new JSZip();
+                const baseFilename = currentFile.name.replace('.pdf', '');
+
+                for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
+                    progressText.textContent = `Renderizando página ${pageNum} de ${pdfDocument.numPages}...`;
+                    
+                    const page = await pdfDocument.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: scale });
+
+                    // Crear un canvas temporal para dibujar la página
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+
+                    await page.render(renderContext).promise;
+
+                    // Convertir el canvas a imagen Base64
+                    // El 0.85 es la calidad (85%) en caso de ser JPG
+                    const dataUrl = canvas.toDataURL(format, 0.85);
+                    const base64Data = dataUrl.split(',')[1]; // Quitar cabecera "data:image/jpeg;base64,"
+
+                    // Nombre seguro con ceros a la izquierda (ej: Documento_01.jpg)
+                    const padding = pdfDocument.numPages.toString().length;
+                    const paddedNum = pageNum.toString().padStart(padding, '0');
+                    const fileName = `${baseFilename}_${paddedNum}.${extension}`;
+
+                    zip.file(fileName, base64Data, { base64: true });
+                }
+
+                progressText.textContent = "Comprimiendo archivo ZIP...";
+                
+                const zipContent = await zip.generateAsync({ type: "blob" });
+
+                // Descargar el archivo ZIP
+                const url = URL.createObjectURL(zipContent);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${baseFilename}_Imagenes.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                progressText.textContent = "¡Proceso finalizado con éxito!";
+                setTimeout(() => {
+                    actionBtn.disabled = false;
+                    progressText.style.display = "none";
+                }, 3000);
+
+            } catch (error) {
+                alert("Ocurrió un error al extraer las imágenes.");
+                console.error(error);
+                actionBtn.disabled = false;
+                progressText.textContent = "Error en el proceso.";
+            }
+        });
+    </script>
+</body>
+
+</html>

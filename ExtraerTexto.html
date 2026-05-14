@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extraer Texto de PDF en el Navegador</title>
+
+    <!-- PDF.js para leer el contenido de texto -->
+    <script src="pdf.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+    <script src="theme.js"></script>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+    </script>
+
+    <style>
+        #textOutput {
+            width: 100%;
+            min-height: 300px;
+            max-height: 500px;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--file-item-border);
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            line-height: 1.7;
+            resize: vertical;
+            box-sizing: border-box;
+            margin-top: 15px;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid var(--accent-color, #4a90d9);
+            color: var(--accent-color, #4a90d9);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-color, #4a90d9);
+            color: #fff;
+        }
+
+        #copyFeedback {
+            font-size: 13px;
+            color: #28a745;
+            align-self: center;
+            display: none;
+        }
+
+        .page-separator {
+            color: #aaa;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Extraer Texto de PDF</h1>
+        <button class="theme-toggle" id="themeToggle" title="Alternar modo oscuro">
+            <svg id="moonIcon" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <svg id="sunIcon" viewBox="0 0 24 24" style="display: none;">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="back-link-container">
+            <a href="index.html" class="back-link">
+                <svg viewBox="0 0 24 24">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al menú
+            </a>
+        </div>
+
+        <div id="dropzone">
+            Arrastra y suelta tu archivo PDF aquí<br>o haz clic para seleccionar
+            <input type="file" id="fileInput" accept="application/pdf" style="display: none;">
+        </div>
+
+        <div id="resultPanel" class="panel" style="display: none;">
+            <div class="file-item">
+                <span id="fileNameDisplay">documento.pdf</span>
+                <span style="font-size: 14px; opacity: 0.8; margin-left: auto; margin-right: 15px;" id="pageCountDisplay"></span>
+                <button class="delete-btn" id="removeFileBtn" title="Eliminar archivo">X</button>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <div id="warningBox" style="display:none; background-color: rgba(255, 152, 0, 0.1); border-left: 4px solid #ff9800; padding: 10px 15px; border-radius: 4px; margin-bottom: 10px;">
+                    <p style="margin: 0; font-size: 13px; color: var(--text-color); line-height: 1.5;">
+                        <strong>⚠️ Aviso:</strong> No se ha podido extraer texto de este PDF. Puede que sea un documento <strong>escaneado como imagen</strong> (sin texto nativo). Para obtener texto de ese tipo de PDF necesitarías un servicio OCR externo.
+                    </p>
+                </div>
+
+                <textarea id="textOutput" readonly placeholder="El texto extraído aparecerá aquí..."></textarea>
+
+                <div class="action-row">
+                    <button id="actionBtn" class="btn-secondary">📋 Copiar todo el texto</button>
+                    <button id="downloadBtn" class="btn-secondary">💾 Descargar como .txt</button>
+                    <span id="copyFeedback">¡Copiado al portapapeles!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Extraer Texto Logic ---
+        const dropzone = document.getElementById("dropzone");
+        const fileInput = document.getElementById("fileInput");
+        const resultPanel = document.getElementById("resultPanel");
+        const fileNameDisplay = document.getElementById("fileNameDisplay");
+        const removeFileBtn = document.getElementById("removeFileBtn");
+        const textOutput = document.getElementById("textOutput");
+        const pageCountDisplay = document.getElementById("pageCountDisplay");
+        const actionBtn = document.getElementById("actionBtn");
+        const downloadBtn = document.getElementById("downloadBtn");
+        const copyFeedback = document.getElementById("copyFeedback");
+        const warningBox = document.getElementById("warningBox");
+
+        let currentFile = null;
+
+        // Eventos del Dropzone
+        dropzone.addEventListener("click", () => fileInput.click());
+        dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+        dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+        dropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropzone.classList.remove("dragover");
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener("change", (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+
+        async function handleFile(file) {
+            if (file.type !== "application/pdf") {
+                alert("Por favor, sube solo archivos PDF.");
+                return;
+            }
+
+            try {
+                currentFile = file;
+
+                // Mostrar panel con estado de carga
+                dropzone.style.display = "none";
+                resultPanel.style.display = "block";
+                fileNameDisplay.textContent = file.name;
+                textOutput.value = "Extrayendo texto...";
+                warningBox.style.display = "none";
+
+                const arrayBuffer = await file.arrayBuffer();
+                const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const numPages = pdfDoc.numPages;
+                pageCountDisplay.textContent = `(${numPages} páginas)`;
+
+                let fullText = '';
+                let totalChars = 0;
+
+                for (let i = 1; i <= numPages; i++) {
+                    const page = await pdfDoc.getPage(i);
+                    const textContent = await page.getTextContent();
+
+                    // Reconstruir el texto de la página
+                    // Agrupamos los items y añadimos saltos de línea cuando hay un cambio vertical significativo
+                    let pageText = '';
+                    let lastY = null;
+
+                    for (const item of textContent.items) {
+                        if ('str' in item) {
+                            // Si el ítem está en una posición Y distinta a la anterior, es una nueva línea
+                            if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+                                pageText += '\n';
+                            }
+                            pageText += item.str;
+                            lastY = item.transform[5];
+                        }
+                    }
+
+                    fullText += `\n--- Página ${i} de ${numPages} ---\n`;
+                    fullText += pageText.trim();
+                    fullText += '\n';
+                    totalChars += pageText.trim().length;
+                }
+
+                // Mostrar resultado
+                textOutput.value = fullText.trim();
+
+                if (totalChars === 0) {
+                    // No se extrajo ningún texto
+                    warningBox.style.display = 'block';
+                    textOutput.value = '(Sin texto extraíble)';
+                }
+
+            } catch (error) {
+                alert("Error al procesar el PDF.");
+                console.error(error);
+            }
+        }
+
+        removeFileBtn.addEventListener("click", () => {
+            currentFile = null;
+            fileInput.value = "";
+            textOutput.value = "";
+            warningBox.style.display = "none";
+            dropzone.style.display = "block";
+            resultPanel.style.display = "none";
+        });
+
+        // Copiar al portapapeles
+        actionBtn.addEventListener("click", async () => {
+            const text = textOutput.value;
+            if (!text || text === '(Sin texto extraíble)') return;
+
+            try {
+                await navigator.clipboard.writeText(text);
+                copyFeedback.style.display = 'inline';
+                setTimeout(() => copyFeedback.style.display = 'none', 2500);
+            } catch (err) {
+                // Fallback para navegadores sin soporte de clipboard API
+                textOutput.select();
+                document.execCommand('copy');
+                copyFeedback.style.display = 'inline';
+                setTimeout(() => copyFeedback.style.display = 'none', 2500);
+            }
+        });
+
+        // Descargar como .txt
+        downloadBtn.addEventListener("click", () => {
+            const text = textOutput.value;
+            if (!text || text === '(Sin texto extraíble)') return;
+
+            const baseName = currentFile ? currentFile.name.replace('.pdf', '') : 'Texto_Extraido';
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${baseName}_texto.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+
+</html>

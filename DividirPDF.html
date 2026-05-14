@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dividir / Extraer PDF en el Navegador</title>
+
+    <!-- PDF-LIB y JSZIP -->
+    <script src="pdf-lib.min.js"></script>
+    <script src="jszip.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="theme.js"></script>
+</head>
+
+<body>
+
+    <header>
+        <h1>Dividir / Extraer PDF</h1>
+        <button class="theme-toggle" id="themeToggle" title="Alternar modo oscuro">
+            <!-- Icono de luna por defecto -->
+            <svg id="moonIcon" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <!-- Icono de sol (oculto por defecto) -->
+            <svg id="sunIcon" viewBox="0 0 24 24" style="display: none;">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="back-link-container">
+            <a href="index.html" class="back-link">
+                <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                Volver al menú
+            </a>
+        </div>
+
+        <div id="dropzone">Arrastra aquí tu PDF o haz clic para seleccionarlo</div>
+        <!-- Solo un archivo -->
+        <input type="file" id="fileInput" accept="application/pdf" style="display:none">
+
+        <!-- Panel de Archivo Cargado y Opciones -->
+        <div id="optionsPanel" class="panel">
+            <h3 style="margin-bottom: 15px; color: var(--h1-color); font-weight: 600;">Archivo cargado:</h3>
+            <div class="file-item">
+                <span id="fileNameDisplay"></span>
+                <button class="delete-btn" id="removeFileBtn" title="Quitar archivo">&times;</button>
+            </div>
+
+            <h3 style="margin-top: 25px; margin-bottom: 15px; color: var(--h1-color); font-weight: 600;">Opciones de División:</h3>
+            
+            <div style="margin-bottom: 15px;">
+                <label class="radio-label">
+                    <input type="radio" name="splitMode" value="range" checked> 
+                    Extraer un rango de páginas (1 PDF)
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="splitMode" value="all"> 
+                    Dividir en páginas individuales (Archivo ZIP)
+                </label>
+            </div>
+
+            <div id="rangeInputs" style="display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; align-items: flex-end;">
+                <div style="display: flex; flex-direction: column;">
+                    <label style="color: var(--text-color); font-size: 14px; margin-bottom: 5px;">Desde página:</label>
+                    <input type="number" id="pageFrom" min="1" value="1">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <label style="color: var(--text-color); font-size: 14px; margin-bottom: 5px;">Hasta página:</label>
+                    <input type="number" id="pageTo" min="1">
+                </div>
+                <div style="display: flex; align-items: center; height: 35px;">
+                    <span id="pageCountDisplay" style="color: var(--text-color); font-size: 14px; opacity: 0.8;"></span>
+                </div>
+            </div>
+        </div>
+
+        <button id="actionBtn" style="display: none;">Dividir PDF</button>
+    </div>
+
+    <script>
+        // --- Dividir PDF Logic ---
+        const dropzone = document.getElementById("dropzone");
+        const fileInput = document.getElementById("fileInput");
+        const optionsPanel = document.getElementById("optionsPanel");
+        const fileNameDisplay = document.getElementById("fileNameDisplay");
+        const removeFileBtn = document.getElementById("removeFileBtn");
+        const actionBtn = document.getElementById("actionBtn");
+        const rangeInputs = document.getElementById("rangeInputs");
+        
+        const pageFromInput = document.getElementById("pageFrom");
+        const pageToInput = document.getElementById("pageTo");
+        const pageCountDisplay = document.getElementById("pageCountDisplay");
+        const radios = document.getElementsByName("splitMode");
+
+        let currentFile = null;
+        let totalPages = 0;
+        let originalPdfDoc = null;
+
+        // Cambiar vista de opciones según el radio seleccionado
+        for (let radio of radios) {
+            radio.addEventListener('change', () => {
+                if (radio.value === 'range') {
+                    rangeInputs.style.display = 'flex';
+                } else {
+                    rangeInputs.style.display = 'none';
+                }
+            });
+        }
+
+        // Abrir selector al hacer clic
+        dropzone.addEventListener("click", () => fileInput.click());
+
+        // Manejar selección manual
+        fileInput.addEventListener("change", (e) => {
+            if (e.target.files.length > 0) {
+                loadFile(e.target.files[0]);
+            }
+        });
+
+        // Arrastrar archivos
+        dropzone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropzone.classList.add("dragover");
+        });
+
+        dropzone.addEventListener("dragleave", () => {
+            dropzone.classList.remove("dragover");
+        });
+
+        dropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropzone.classList.remove("dragover");
+            if (e.dataTransfer.files.length > 0) {
+                loadFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Eliminar archivo cargado
+        removeFileBtn.addEventListener("click", () => {
+            currentFile = null;
+            originalPdfDoc = null;
+            totalPages = 0;
+            fileInput.value = "";
+            
+            dropzone.style.display = "block";
+            optionsPanel.style.display = "none";
+            actionBtn.style.display = "none";
+        });
+
+        // Cargar y analizar el archivo PDF
+        async function loadFile(file) {
+            if (file.type !== "application/pdf") {
+                alert("Por favor, selecciona un archivo PDF válido.");
+                return;
+            }
+
+            try {
+                actionBtn.textContent = "Analizando PDF...";
+                actionBtn.style.display = "block";
+                actionBtn.disabled = true;
+                
+                const arrayBuffer = await file.arrayBuffer();
+                originalPdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+                totalPages = originalPdfDoc.getPageCount();
+                
+                currentFile = file;
+                fileNameDisplay.textContent = file.name;
+                
+                // Actualizar inputs
+                pageFromInput.value = 1;
+                pageFromInput.max = totalPages;
+                pageToInput.value = totalPages;
+                pageToInput.max = totalPages;
+                pageCountDisplay.textContent = `(de ${totalPages} páginas en total)`;
+
+                // Actualizar UI
+                dropzone.style.display = "none";
+                optionsPanel.style.display = "block";
+                
+                actionBtn.textContent = "Dividir PDF";
+                actionBtn.disabled = false;
+
+            } catch (error) {
+                console.error("Error al cargar PDF:", error);
+                alert("Hubo un error al leer el PDF. Asegúrate de que no esté dañado o protegido con contraseña.");
+                actionBtn.style.display = "none";
+            }
+        }
+
+        // Ejecutar división
+        actionBtn.addEventListener("click", async () => {
+            if (!currentFile || !originalPdfDoc) return;
+
+            const mode = document.querySelector('input[name="splitMode"]:checked').value;
+            actionBtn.disabled = true;
+            actionBtn.textContent = "Procesando...";
+
+            try {
+                if (mode === 'range') {
+                    // --- Modo Rango ---
+                    let from = parseInt(pageFromInput.value);
+                    let to = parseInt(pageToInput.value);
+
+                    if (isNaN(from) || isNaN(to) || from < 1 || to > totalPages || from > to) {
+                        alert(`Por favor ingresa un rango válido entre 1 y ${totalPages}.`);
+                        actionBtn.disabled = false;
+                        actionBtn.textContent = "Dividir PDF";
+                        return;
+                    }
+
+                    // Crear nuevo PDF
+                    const newPdf = await PDFLib.PDFDocument.create();
+                    
+                    // Arrays en pdf-lib son 0-indexados
+                    const indices = [];
+                    for (let i = from - 1; i <= to - 1; i++) {
+                        indices.push(i);
+                    }
+
+                    const copiedPages = await newPdf.copyPages(originalPdfDoc, indices);
+                    copiedPages.forEach(page => newPdf.addPage(page));
+
+                    const pdfBytes = await newPdf.save();
+                    downloadFile(pdfBytes, `Rango_${from}-${to}_${currentFile.name}`, "application/pdf");
+
+                } else if (mode === 'all') {
+                    // --- Modo Todas (ZIP) ---
+                    const zip = new JSZip();
+                    const baseName = currentFile.name.replace('.pdf', '');
+                    
+                    // Carpeta dentro del zip opcional
+                    const folder = zip.folder(`Paginas_${baseName}`);
+
+                    for (let i = 0; i < totalPages; i++) {
+                        const singlePdf = await PDFLib.PDFDocument.create();
+                        const [copiedPage] = await singlePdf.copyPages(originalPdfDoc, [i]);
+                        singlePdf.addPage(copiedPage);
+                        
+                        const pdfBytes = await singlePdf.save();
+                        // Formato de nombre: archivo_p1.pdf
+                        folder.file(`${baseName}_p${i + 1}.pdf`, pdfBytes);
+                    }
+
+                    actionBtn.textContent = "Generando ZIP...";
+                    const zipContent = await zip.generateAsync({ type: "blob" });
+                    downloadBlob(zipContent, `Paginas_Individuales_${baseName}.zip`);
+                }
+
+            } catch (error) {
+                console.error("Error al dividir PDF:", error);
+                alert("Ha ocurrido un error al procesar el archivo.");
+            }
+
+            actionBtn.disabled = false;
+            actionBtn.textContent = "Dividir PDF";
+        });
+
+        // Función de utilidad para descargar bytes (PDF)
+        function downloadFile(bytes, filename, mimeType) {
+            const blob = new Blob([bytes], { type: mimeType });
+            downloadBlob(blob, filename);
+        }
+
+        // Función de utilidad para descargar Blobs (ZIP)
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+    </script>
+</body>
+
+</html>

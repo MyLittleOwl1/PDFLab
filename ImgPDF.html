@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imágenes a PDF en el Navegador</title>
+
+    <!-- PDF-LIB -->
+    <script src="pdf-lib.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="theme.js"></script>
+</head>
+
+<body>
+
+    <header>
+        <h1>Imágenes a PDF</h1>
+        <button class="theme-toggle" id="themeToggle" title="Alternar modo oscuro">
+            <!-- Icono de luna por defecto -->
+            <svg id="moonIcon" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <!-- Icono de sol (oculto por defecto) -->
+            <svg id="sunIcon" viewBox="0 0 24 24" style="display: none;">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="back-link-container">
+            <a href="index.html" class="back-link">
+                <svg viewBox="0 0 24 24">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al menú
+            </a>
+        </div>
+
+        <div id="dropzone">
+            Arrastra y suelta tus imágenes (JPG/PNG) aquí<br>o haz clic para seleccionarlas
+            <input type="file" id="fileInput" accept="image/jpeg, image/png" multiple style="display: none;">
+        </div>
+
+        <div id="fileList">
+            <h3 style="margin-bottom: 15px; color: var(--h1-color); font-weight: 600;">Imágenes añadidas:</h3>
+            <ul id="list"></ul>
+        </div>
+
+        <button id="actionBtn" style="display: none;">Convertir a PDF</button>
+    </div>
+
+    <script>
+        // --- Imágenes a PDF Logic ---
+        const dropzone = document.getElementById("dropzone");
+        const fileInput = document.getElementById("fileInput");
+        const list = document.getElementById("list");
+        const actionBtn = document.getElementById("actionBtn");
+
+        let imageFiles = [];
+
+        // Abrir selector al hacer clic
+        dropzone.addEventListener("click", () => fileInput.click());
+
+        // Manejar selección manual
+        fileInput.addEventListener("change", (e) => {
+            addFiles(e.target.files);
+        });
+
+        // Arrastrar archivos
+        dropzone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropzone.classList.add("dragover");
+        });
+
+        dropzone.addEventListener("dragleave", () => {
+            dropzone.classList.remove("dragover");
+        });
+
+        dropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropzone.classList.remove("dragover");
+            addFiles(e.dataTransfer.files);
+        });
+
+        // Añadir archivos a la lista
+        function addFiles(files) {
+            for (let file of files) {
+                // Filtrar solo imágenes JPG y PNG
+                if (file.type === "image/jpeg" || file.type === "image/png" || file.type === "image/jpg") {
+                    imageFiles.push(file);
+                    const li = document.createElement("li");
+                    
+                    const fileName = document.createElement("span");
+                    fileName.textContent = file.name;
+                    
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.innerHTML = "X";
+                    deleteBtn.className = "delete-btn";
+                    deleteBtn.title = "Eliminar";
+                    
+                    deleteBtn.addEventListener("click", () => {
+                        list.removeChild(li); // Quitar del HTML
+                        imageFiles = imageFiles.filter(f => f !== file); // Quitar del array interno
+                        if (imageFiles.length === 0) {
+                            actionBtn.style.display = "none";
+                        }
+                    });
+
+                    li.appendChild(fileName);
+                    li.appendChild(deleteBtn);
+                    list.appendChild(li);
+                } else {
+                    alert(`El archivo "${file.name}" no es compatible. Solo se admiten JPG y PNG.`);
+                }
+            }
+
+            if (imageFiles.length > 0) {
+                actionBtn.style.display = "block";
+            }
+        }
+
+        // Convertir a PDF
+        actionBtn.addEventListener("click", async () => {
+            if (imageFiles.length === 0) {
+                alert("No has añadido ninguna imagen.");
+                return;
+            }
+
+            try {
+                actionBtn.disabled = true;
+                actionBtn.textContent = "Procesando...";
+
+                // Crear un nuevo documento PDF
+                const pdfDoc = await PDFLib.PDFDocument.create();
+
+                for (let file of imageFiles) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    let pdfImage;
+                    
+                    // Incrustar la imagen según su tipo
+                    if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+                        pdfImage = await pdfDoc.embedJpg(arrayBuffer);
+                    } else if (file.type === 'image/png') {
+                        pdfImage = await pdfDoc.embedPng(arrayBuffer);
+                    }
+
+                    // Crear una página A4
+                    const page = pdfDoc.addPage(PDFLib.PageSizes.A4);
+                    const { width, height } = page.getSize();
+                    const imgDims = pdfImage.scale(1);
+
+                    // Calcular escala para encajar la imagen en A4 respetando el aspect ratio con un margen
+                    const margin = 20; 
+                    const maxWidth = width - (margin * 2);
+                    const maxHeight = height - (margin * 2);
+
+                    const scale = Math.min(maxWidth / imgDims.width, maxHeight / imgDims.height);
+                    
+                    // Si la imagen es más pequeña que la página, podríamos no escalarla hacia arriba si prefiriéramos,
+                    // pero normalmente se escala para ocupar la hoja. Si solo queremos encajarla si es más grande:
+                    // const finalScale = scale < 1 ? scale : 1; 
+                    // Vamos a escalarla en ambos sentidos para que quede visible, pero puedes cambiarlo a finalScale.
+                    const finalScale = scale; 
+
+                    const drawWidth = imgDims.width * finalScale;
+                    const drawHeight = imgDims.height * finalScale;
+
+                    // Centrar la imagen
+                    const x = (width - drawWidth) / 2;
+                    const y = (height - drawHeight) / 2;
+
+                    page.drawImage(pdfImage, {
+                        x: x,
+                        y: y,
+                        width: drawWidth,
+                        height: drawHeight,
+                    });
+                }
+
+                const pdfBytes = await pdfDoc.save();
+
+                // Descargar archivo final
+                const blob = new Blob([pdfBytes], { type: "application/pdf" });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "Imagenes_Unidas.pdf";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                actionBtn.disabled = false;
+                actionBtn.textContent = "Convertir a PDF";
+
+            } catch (error) {
+                alert("Ocurrió un error al convertir las imágenes.");
+                console.error(error);
+                actionBtn.disabled = false;
+                actionBtn.textContent = "Convertir a PDF";
+            }
+        });
+    </script>
+</body>
+
+</html>

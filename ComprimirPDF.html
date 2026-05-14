@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprimir PDF en el Navegador</title>
+
+    <!-- PDF.js para rasterizar el PDF -->
+    <script src="pdf.min.js"></script>
+    <!-- PDF-LIB para reconstruir el PDF -->
+    <script src="pdf-lib.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+    <script src="theme.js"></script>
+
+    <script>
+        // Configurar la ruta del worker local para PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+    </script>
+</head>
+
+<body>
+
+    <header>
+        <h1>Comprimir PDF</h1>
+        <button class="theme-toggle" id="themeToggle" title="Alternar modo oscuro">
+            <!-- Icono de luna por defecto -->
+            <svg id="moonIcon" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <!-- Icono de sol (oculto por defecto) -->
+            <svg id="sunIcon" viewBox="0 0 24 24" style="display: none;">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="back-link-container">
+            <a href="index.html" class="back-link">
+                <svg viewBox="0 0 24 24">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al menú
+            </a>
+        </div>
+
+        <div class="warning-box" style="background-color: rgba(255, 152, 0, 0.1); border-left: 4px solid #ff9800; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+            <p style="margin: 0; font-size: 14px; color: var(--text-color); line-height: 1.5;">
+                <strong>⚠️ Atención:</strong> Esta herramienta convierte las páginas en imágenes. Úsala <strong>SOLO para PDFs muy pesados o escaneados (varios MBs)</strong>. Si subes un PDF ligero compuesto por texto nativo, el archivo resultante pesará más y se verá peor. Además, el texto dejará de ser seleccionable.
+            </p>
+        </div>
+
+        <div id="dropzone">
+            Arrastra y suelta tu archivo PDF aquí<br>o haz clic para seleccionar
+            <input type="file" id="fileInput" accept="application/pdf" style="display: none;">
+        </div>
+
+        <div id="optionsPanel" class="panel" style="display: none;">
+            <div class="file-item">
+                <span id="fileNameDisplay">documento.pdf</span>
+                <span style="font-size: 14px; opacity: 0.8; margin-left: auto; margin-right: 15px;" id="pageCountDisplay"></span>
+                <span style="font-size: 14px; opacity: 0.8; margin-right: 15px; color: var(--color-orange);" id="fileSizeDisplay"></span>
+                <button class="delete-btn" id="removeFileBtn" title="Eliminar archivo">X</button>
+            </div>
+
+            <div style="margin-top: 20px; border-top: 1px solid var(--file-item-border); padding-top: 15px;">
+                <h3 style="margin-bottom: 15px; color: var(--h1-color);">Niveles de Compresión</h3>
+                <label class="radio-label">
+                    <!-- value: scale,quality -->
+                    <input type="radio" name="compressionLevel" value="1.5,0.8">
+                    <strong>Baja Compresión</strong> (Mayor calidad, menos reducción de tamaño)
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="compressionLevel" value="1.0,0.6" checked>
+                    <strong>Media Compresión</strong> (Equilibrado, recomendado)
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="compressionLevel" value="0.7,0.4">
+                    <strong>Alta Compresión</strong> (Baja calidad, máxima reducción de tamaño)
+                </label>
+            </div>
+        </div>
+
+        <button id="actionBtn" style="display: none;">Comprimir y Descargar PDF</button>
+        <div id="progressText" style="display: none; text-align: center; margin-top: 15px; color: var(--text-color);"></div>
+    </div>
+
+    <script>
+        // --- Comprimir PDF Logic ---
+        const dropzone = document.getElementById("dropzone");
+        const fileInput = document.getElementById("fileInput");
+        const optionsPanel = document.getElementById("optionsPanel");
+        const fileNameDisplay = document.getElementById("fileNameDisplay");
+        const removeFileBtn = document.getElementById("removeFileBtn");
+        const actionBtn = document.getElementById("actionBtn");
+        const pageCountDisplay = document.getElementById("pageCountDisplay");
+        const fileSizeDisplay = document.getElementById("fileSizeDisplay");
+        const progressText = document.getElementById("progressText");
+
+        let currentFile = null;
+        let pdfDocument = null;
+
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+        dropzone.addEventListener("click", () => fileInput.click());
+        dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+        dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+        dropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropzone.classList.remove("dragover");
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener("change", (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+
+        async function handleFile(file) {
+            if (file.type !== "application/pdf") {
+                alert("Por favor, sube solo archivos PDF.");
+                return;
+            }
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                
+                // Cargar con PDF.js
+                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                pdfDocument = await loadingTask.promise;
+                currentFile = file;
+
+                // Actualizar UI
+                fileNameDisplay.textContent = file.name;
+                pageCountDisplay.textContent = `(${pdfDocument.numPages} páginas)`;
+                fileSizeDisplay.textContent = formatBytes(file.size);
+                
+                dropzone.style.display = "none";
+                optionsPanel.style.display = "block";
+                actionBtn.style.display = "block";
+                progressText.style.display = "none";
+
+            } catch (error) {
+                alert("Error al leer el PDF. Puede que esté protegido o corrupto.");
+                console.error(error);
+            }
+        }
+
+        removeFileBtn.addEventListener("click", () => {
+            currentFile = null;
+            pdfDocument = null;
+            fileInput.value = "";
+            dropzone.style.display = "block";
+            optionsPanel.style.display = "none";
+            actionBtn.style.display = "none";
+            progressText.style.display = "none";
+        });
+
+        // Proceso de Compresión
+        actionBtn.addEventListener("click", async () => {
+            if (!pdfDocument) return;
+
+            const compressionValue = document.querySelector('input[name="compressionLevel"]:checked').value;
+            const [scale, quality] = compressionValue.split(',').map(Number);
+
+            actionBtn.disabled = true;
+            progressText.style.display = "block";
+            progressText.textContent = `Iniciando proceso... (0 / ${pdfDocument.numPages})`;
+
+            try {
+                // Crear un nuevo documento PDF usando pdf-lib
+                const newPdfDoc = await PDFLib.PDFDocument.create();
+                
+                for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
+                    progressText.textContent = `Comprimiendo página ${pageNum} de ${pdfDocument.numPages}...`;
+                    
+                    // 1. Extraer página con pdf.js
+                    const page = await pdfDocument.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: scale });
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+
+                    await page.render(renderContext).promise;
+
+                    // 2. Convertir a JPG comprimido
+                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    
+                    // 3. Incrustar en el nuevo PDF
+                    const imageBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
+                    const jpgImage = await newPdfDoc.embedJpg(imageBytes);
+                    
+                    // 4. Crear hoja en el nuevo PDF del tamaño de la imagen original (no escalada)
+                    // Para que las páginas midan igual que las originales, obtenemos el viewport a escala 1
+                    const originalViewport = page.getViewport({ scale: 1 });
+                    const newPage = newPdfDoc.addPage([originalViewport.width, originalViewport.height]);
+                    
+                    // 5. Dibujar imagen ocupando toda la hoja
+                    newPage.drawImage(jpgImage, {
+                        x: 0,
+                        y: 0,
+                        width: originalViewport.width,
+                        height: originalViewport.height,
+                    });
+                }
+
+                progressText.textContent = "Generando PDF final...";
+                
+                // Guardar PDF sin metadatos pesados (useObjectStreams: false ayuda mínimamente, 
+                // pero la rasterización hizo el trabajo pesado)
+                const pdfBytes = await newPdfDoc.save({ useObjectStreams: false });
+
+                // Descargar el archivo
+                const blob = new Blob([pdfBytes], { type: "application/pdf" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `Comprimido_${currentFile.name}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                progressText.textContent = `¡Proceso finalizado! Tamaño reducido aprox: ${formatBytes(blob.size)}`;
+                
+                setTimeout(() => {
+                    actionBtn.disabled = false;
+                    // No ocultamos el texto para que vea el tamaño final
+                }, 3000);
+
+            } catch (error) {
+                alert("Ocurrió un error al comprimir el PDF.");
+                console.error(error);
+                actionBtn.disabled = false;
+                progressText.textContent = "Error en el proceso.";
+            }
+        });
+    </script>
+</body>
+
+</html>
