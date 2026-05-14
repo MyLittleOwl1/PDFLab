@@ -328,6 +328,45 @@
             previewPanel.style.display = "none";
             pendingBlob = null;
         });
+
+        // --- Soporte para dispositivos táctiles ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        function onTouchStart(e) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            dragSrcCard = this;
+            this.classList.add('dragging');
+        }
+
+        function onTouchMove(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+            if (target && target.classList.contains('page-card') && target !== dragSrcCard) {
+                const rect = target.getBoundingClientRect();
+                const midX = rect.left + rect.width / 2;
+
+                if (touch.clientX < midX) {
+                    pagesGrid.insertBefore(dragSrcCard, target);
+                } else {
+                    pagesGrid.insertBefore(dragSrcCard, target.nextSibling);
+                }
+                updateLabels();
+            }
+        }
+
+        function onTouchEnd() {
+            dragSrcCard.classList.remove('dragging');
+            dragSrcCard = null;
+        }
+
+        // Añadir eventos táctiles a las tarjetas
+        card.addEventListener('touchstart', onTouchStart);
+        card.addEventListener('touchmove', onTouchMove);
+        card.addEventListener('touchend', onTouchEnd);
     </script>
 </body>
 

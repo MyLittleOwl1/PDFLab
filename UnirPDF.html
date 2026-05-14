@@ -251,6 +251,42 @@
                 mergeBtn.disabled = false;
             }
         });
+
+        // --- Soporte para dispositivos táctiles ---
+        let touchStartY = 0;
+
+        function onTouchStart(e) {
+            touchStartY = e.touches[0].clientY;
+            dragSrcLi = this;
+            setTimeout(() => this.classList.add("dragging"), 0);
+        }
+
+        function onTouchMove(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+            if (target && target.tagName === "LI" && target !== dragSrcLi) {
+                const rect = target.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+
+                if (touch.clientY < midY) {
+                    list.insertBefore(dragSrcLi, target);
+                } else {
+                    list.insertBefore(dragSrcLi, target.nextSibling);
+                }
+            }
+        }
+
+        function onTouchEnd() {
+            dragSrcLi.classList.remove("dragging");
+            dragSrcLi = null;
+        }
+
+        // Añadir eventos táctiles a los elementos de la lista
+        li.addEventListener("touchstart", onTouchStart);
+        li.addEventListener("touchmove", onTouchMove);
+        li.addEventListener("touchend", onTouchEnd);
     </script>
 </body>
 
