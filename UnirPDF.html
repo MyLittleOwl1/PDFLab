@@ -199,6 +199,11 @@
                         }
                     }
                 });
+
+                // --- Soporte para dispositivos táctiles ---
+                li.addEventListener("touchstart", onTouchStart, { passive: false });
+                li.addEventListener("touchmove", onTouchMove, { passive: false });
+                li.addEventListener("touchend", onTouchEnd);
             }
         }
 
@@ -253,40 +258,47 @@
         });
 
         // --- Soporte para dispositivos táctiles ---
-        let touchStartY = 0;
-
         function onTouchStart(e) {
-            touchStartY = e.touches[0].clientY;
             dragSrcLi = this;
+            // No prevenimos default aquí para permitir scroll si no se toca el handle
+            // (aunque el handle tiene touch-action: none en CSS)
             setTimeout(() => this.classList.add("dragging"), 0);
         }
 
         function onTouchMove(e) {
+            if (!dragSrcLi) return;
+
+            // Prevenir scroll si estamos arrastrando
             e.preventDefault();
+
             const touch = e.touches[0];
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
 
-            if (target && target.tagName === "LI" && target !== dragSrcLi) {
-                const rect = target.getBoundingClientRect();
+            // Subir por el DOM hasta encontrar un LI
+            let liTarget = target;
+            while (liTarget && liTarget.tagName !== "LI") {
+                liTarget = liTarget.parentElement;
+            }
+
+            if (liTarget && liTarget.tagName === "LI" && liTarget !== dragSrcLi) {
+                const rect = liTarget.getBoundingClientRect();
                 const midY = rect.top + rect.height / 2;
 
                 if (touch.clientY < midY) {
-                    list.insertBefore(dragSrcLi, target);
+                    list.insertBefore(dragSrcLi, liTarget);
                 } else {
-                    list.insertBefore(dragSrcLi, target.nextSibling);
+                    list.insertBefore(dragSrcLi, liTarget.nextSibling);
                 }
             }
         }
 
         function onTouchEnd() {
-            dragSrcLi.classList.remove("dragging");
-            dragSrcLi = null;
+            if (dragSrcLi) {
+                dragSrcLi.classList.remove("dragging");
+                dragSrcLi = null;
+            }
         }
 
-        // Añadir eventos táctiles a los elementos de la lista
-        li.addEventListener("touchstart", onTouchStart);
-        li.addEventListener("touchmove", onTouchMove);
-        li.addEventListener("touchend", onTouchEnd);
     </script>
 </body>
 

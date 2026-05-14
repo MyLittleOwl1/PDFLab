@@ -642,6 +642,9 @@ input[type="color"] {
 #list li:hover .drag-handle-icon {
     opacity: 1;
 }
+.drag-handle, .drag-handle-icon {
+    touch-action: none;
+}
 #progressText {
     text-align: center;
     margin-top: 12px;

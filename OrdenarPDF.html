@@ -193,6 +193,11 @@
                 card.addEventListener('drop', onDrop);
                 card.addEventListener('dragend', onDragEnd);
 
+                // --- Soporte para dispositivos táctiles ---
+                card.addEventListener('touchstart', onTouchStart, { passive: false });
+                card.addEventListener('touchmove', onTouchMove, { passive: false });
+                card.addEventListener('touchend', onTouchEnd);
+
                 actionBtn.textContent = `Cargando miniaturas... (${i}/${numPages})`;
             }
 
@@ -330,43 +335,49 @@
         });
 
         // --- Soporte para dispositivos táctiles ---
-        let touchStartX = 0;
-        let touchStartY = 0;
-
         function onTouchStart(e) {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
             dragSrcCard = this;
             this.classList.add('dragging');
+            // Solo prevenir default si estamos tocando el handle o si queremos permitir drag en toda la card
+            // e.preventDefault(); 
         }
 
         function onTouchMove(e) {
+            if (!dragSrcCard) return;
+            
+            // Prevenir scroll mientras se arrastra
             e.preventDefault();
-            const touch = e.touches[0];
-            const target = document.elementFromPoint(touch.clientX, touch.clientY);
 
-            if (target && target.classList.contains('page-card') && target !== dragSrcCard) {
-                const rect = target.getBoundingClientRect();
+            const touch = e.touches[0];
+            // Encontrar el elemento bajo el dedo
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            // Subir por el DOM hasta encontrar una page-card
+            let cardTarget = target;
+            while (cardTarget && !cardTarget.classList.contains('page-card')) {
+                cardTarget = cardTarget.parentElement;
+            }
+
+            if (cardTarget && cardTarget.classList.contains('page-card') && cardTarget !== dragSrcCard) {
+                const rect = cardTarget.getBoundingClientRect();
                 const midX = rect.left + rect.width / 2;
 
                 if (touch.clientX < midX) {
-                    pagesGrid.insertBefore(dragSrcCard, target);
+                    pagesGrid.insertBefore(dragSrcCard, cardTarget);
                 } else {
-                    pagesGrid.insertBefore(dragSrcCard, target.nextSibling);
+                    pagesGrid.insertBefore(dragSrcCard, cardTarget.nextSibling);
                 }
                 updateLabels();
             }
         }
 
         function onTouchEnd() {
-            dragSrcCard.classList.remove('dragging');
-            dragSrcCard = null;
+            if (dragSrcCard) {
+                dragSrcCard.classList.remove('dragging');
+                dragSrcCard = null;
+            }
         }
 
-        // Añadir eventos táctiles a las tarjetas
-        card.addEventListener('touchstart', onTouchStart);
-        card.addEventListener('touchmove', onTouchMove);
-        card.addEventListener('touchend', onTouchEnd);
     </script>
 </body>
 
