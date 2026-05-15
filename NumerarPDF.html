@@ -14,6 +14,71 @@
     <script src="theme.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';</script>
 
+    <style>
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option-group label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--h1-color);
+        }
+
+        select,
+        input[type="text"],
+        input[type="number"],
+        input[type="color"] {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--file-item-border);
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 15px;
+            width: 100%;
+        }
+
+        #previewPanel {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #previewPanel .preview-inner {
+            border: 1px solid var(--file-item-border);
+            border-radius: 10px;
+            padding: 16px;
+            background: var(--panel-bg);
+            text-align: center;
+        }
+
+        #previewCanvas {
+            max-width: 100%;
+            border-radius: 6px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 
 <body>
