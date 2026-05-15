@@ -644,6 +644,7 @@ input[type="color"] {
     transform: scale(1.05);
     pointer-events: none; /* Vital para document.elementFromPoint en móvil */
     z-index: 100;
+    transition: none !important;
 }
 
 .page-card.drag-over {
@@ -660,17 +661,18 @@ input[type="color"] {
 
 .drag-handle {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 5px;
+    right: 5px;
     background: var(--dropzone-bg-hover);
     border-radius: 6px;
-    padding: 2px 6px;
+    padding: 8px 12px; /* Mayor área táctil */
     cursor: grab;
-    font-size: 20px;
+    font-size: 22px;
     line-height: 1;
     color: var(--dropzone-text);
     touch-action: none;
     user-select: none;
+    z-index: 10;
 }
 
 .page-label {
@@ -689,6 +691,7 @@ input[type="color"] {
     opacity: 0.4;
     cursor: grabbing;
     pointer-events: none; /* Vital para document.elementFromPoint en móvil */
+    transition: none !important;
 }
 #list li.drag-over-li {
     border-color: var(--accent-color, #4a90d9);
@@ -703,8 +706,10 @@ input[type="color"] {
     opacity: 0.8;
     cursor: grab;
     user-select: none;
-    min-width: 24px;
+    min-width: 44px; /* Área táctil estándar móvil */
+    min-height: 44px;
     color: var(--accent-color, #007bff);
+    touch-action: none;
 }
 .drag-handle-icon svg {
     width: 20px;

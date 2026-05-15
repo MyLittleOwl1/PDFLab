@@ -208,11 +208,11 @@
 
         // --- Soporte para dispositivos táctiles ---
         function onTouchStart(e) {
-            // Solo activamos el arrastre si se toca el "handle"
-            const handle = this.querySelector('.drag-handle-icon');
-            if (e.target === handle || handle.contains(e.target)) {
+            // Usamos closest para detectar si el toque fue en el handle
+            const handle = e.target.closest('.drag-handle-icon');
+            if (handle) {
                 dragSrcLi = this;
-                setTimeout(() => this.classList.add("dragging"), 0);
+                this.classList.add("dragging");
             }
         }
 
@@ -223,18 +223,21 @@
             e.preventDefault();
 
             const touch = e.touches[0];
-            // Gracias a pointer-events: none en .dragging (CSS), elementFromPoint verá lo que hay debajo
-            const target = document.elementFromPoint(touch.clientX, touch.clientY);
-
-            if (!target) return;
-
-            // Subir por el DOM hasta encontrar un LI
-            let liTarget = target;
-            while (liTarget && liTarget.tagName !== "LI") {
-                liTarget = liTarget.parentElement;
+            
+            // Usamos elementsFromPoint para obtener todos los elementos bajo el dedo
+            const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+            
+            // Buscamos el elemento LI sobre el que estamos (que no sea el propio LI que arrastramos)
+            let liTarget = null;
+            for (const el of elements) {
+                const li = el.closest('li');
+                if (li && li !== dragSrcLi) {
+                    liTarget = li;
+                    break;
+                }
             }
 
-            if (liTarget && liTarget.tagName === "LI" && liTarget !== dragSrcLi) {
+            if (liTarget) {
                 const rect = liTarget.getBoundingClientRect();
                 const midY = rect.top + rect.height / 2;
 

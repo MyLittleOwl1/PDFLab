@@ -336,9 +336,9 @@
 
         // --- Soporte para dispositivos táctiles ---
         function onTouchStart(e) {
-            // Solo activamos el arrastre si se toca el "handle"
-            const handle = this.querySelector('.drag-handle');
-            if (e.target === handle || handle.contains(e.target)) {
+            // Usamos closest para detectar si el toque fue en el handle
+            const handle = e.target.closest('.drag-handle');
+            if (handle) {
                 dragSrcCard = this;
                 this.classList.add('dragging');
             }
@@ -347,28 +347,30 @@
         function onTouchMove(e) {
             if (!dragSrcCard) return;
 
-            // Prevenir scroll mientras se arrastra activamente
+            // Prevenir scroll mientras se arrastra
             e.preventDefault();
 
             const touch = e.touches[0];
-            // Gracias a pointer-events: none en .dragging (CSS), elementFromPoint verá lo que hay debajo
-            const target = document.elementFromPoint(touch.clientX, touch.clientY);
             
-            if (!target) return;
-
-            // Subir por el DOM hasta encontrar una page-card
-            let cardTarget = target;
-            while (cardTarget && !cardTarget.classList.contains('page-card')) {
-                cardTarget = cardTarget.parentElement;
+            // Usamos elementsFromPoint para obtener todos los elementos bajo el dedo
+            const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+            
+            // Buscamos la tarjeta sobre la que estamos (que no sea la propia tarjeta que arrastramos)
+            let cardTarget = null;
+            for (const el of elements) {
+                const card = el.closest('.page-card');
+                if (card && card !== dragSrcCard) {
+                    cardTarget = card;
+                    break;
+                }
             }
 
-            if (cardTarget && cardTarget.classList.contains('page-card') && cardTarget !== dragSrcCard) {
+            if (cardTarget) {
                 const rect = cardTarget.getBoundingClientRect();
                 const midX = rect.left + rect.width / 2;
-                const midY = rect.top + rect.height / 2;
-
-                // En una cuadrícula, el movimiento puede ser horizontal o vertical
-                if (touch.clientX < midX || touch.clientY < midY) {
+                
+                // Si el dedo está en la mitad izquierda de la tarjeta objetivo, insertamos antes.
+                if (touch.clientX < midX) {
                     pagesGrid.insertBefore(dragSrcCard, cardTarget);
                 } else {
                     pagesGrid.insertBefore(dragSrcCard, cardTarget.nextSibling);
