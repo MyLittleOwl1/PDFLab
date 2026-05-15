@@ -336,22 +336,26 @@
 
         // --- Soporte para dispositivos táctiles ---
         function onTouchStart(e) {
-            dragSrcCard = this;
-            this.classList.add('dragging');
-            // Solo prevenir default si estamos tocando el handle o si queremos permitir drag en toda la card
-            // e.preventDefault(); 
+            // Solo activamos el arrastre si se toca el "handle"
+            const handle = this.querySelector('.drag-handle');
+            if (e.target === handle || handle.contains(e.target)) {
+                dragSrcCard = this;
+                this.classList.add('dragging');
+            }
         }
 
         function onTouchMove(e) {
             if (!dragSrcCard) return;
-            
-            // Prevenir scroll mientras se arrastra
+
+            // Prevenir scroll mientras se arrastra activamente
             e.preventDefault();
 
             const touch = e.touches[0];
-            // Encontrar el elemento bajo el dedo
+            // Gracias a pointer-events: none en .dragging (CSS), elementFromPoint verá lo que hay debajo
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
             
+            if (!target) return;
+
             // Subir por el DOM hasta encontrar una page-card
             let cardTarget = target;
             while (cardTarget && !cardTarget.classList.contains('page-card')) {
@@ -361,8 +365,10 @@
             if (cardTarget && cardTarget.classList.contains('page-card') && cardTarget !== dragSrcCard) {
                 const rect = cardTarget.getBoundingClientRect();
                 const midX = rect.left + rect.width / 2;
+                const midY = rect.top + rect.height / 2;
 
-                if (touch.clientX < midX) {
+                // En una cuadrícula, el movimiento puede ser horizontal o vertical
+                if (touch.clientX < midX || touch.clientY < midY) {
                     pagesGrid.insertBefore(dragSrcCard, cardTarget);
                 } else {
                     pagesGrid.insertBefore(dragSrcCard, cardTarget.nextSibling);

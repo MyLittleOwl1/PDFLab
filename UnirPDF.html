@@ -11,57 +11,6 @@
     <link rel="stylesheet" href="styles.css">
     <script src="theme.js"></script>
 
-    <style>
-        /* Estilos drag & drop para los elementos de la lista */
-        #list li {
-            cursor: grab;
-            transition: opacity 0.2s, transform 0.15s;
-        }
-        #list li.dragging {
-            opacity: 0.4;
-            cursor: grabbing;
-        }
-        #list li.drag-over-li {
-            border-color: var(--accent-color, #4a90d9);
-            border-style: dashed;
-            transform: scale(1.01);
-        }
-        .drag-handle-icon {
-            display: flex !important;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            opacity: 0.8;
-            cursor: grab;
-            user-select: none;
-            min-width: 24px;
-            color: var(--accent-color, #007bff);
-        }
-        .drag-handle-icon svg {
-            width: 20px;
-            height: 20px;
-            display: block;
-        }
-        #list li:hover .drag-handle-icon {
-            opacity: 1;
-        }
-        #progressText {
-            text-align: center;
-            margin-top: 12px;
-            font-size: 14px;
-            color: var(--text-color);
-            opacity: 0.8;
-            display: none;
-        }
-        .hint-text {
-            font-size: 12px;
-            opacity: 0.55;
-            color: var(--text-color);
-            margin-top: 6px;
-            margin-bottom: 0;
-            text-align: center;
-        }
-    </style>
 </head>
 
 <body>
@@ -259,20 +208,25 @@
 
         // --- Soporte para dispositivos táctiles ---
         function onTouchStart(e) {
-            dragSrcLi = this;
-            // No prevenimos default aquí para permitir scroll si no se toca el handle
-            // (aunque el handle tiene touch-action: none en CSS)
-            setTimeout(() => this.classList.add("dragging"), 0);
+            // Solo activamos el arrastre si se toca el "handle"
+            const handle = this.querySelector('.drag-handle-icon');
+            if (e.target === handle || handle.contains(e.target)) {
+                dragSrcLi = this;
+                setTimeout(() => this.classList.add("dragging"), 0);
+            }
         }
 
         function onTouchMove(e) {
             if (!dragSrcLi) return;
 
-            // Prevenir scroll si estamos arrastrando
+            // Prevenir scroll mientras se arrastra
             e.preventDefault();
 
             const touch = e.touches[0];
+            // Gracias a pointer-events: none en .dragging (CSS), elementFromPoint verá lo que hay debajo
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+            if (!target) return;
 
             // Subir por el DOM hasta encontrar un LI
             let liTarget = target;
