@@ -90,18 +90,6 @@
                 const li = document.createElement("li");
                 li.draggable = true;
 
-                const handle = document.createElement("span");
-                handle.className = "drag-handle-icon";
-                handle.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <circle cx="9" cy="5" r="2" />
-                        <circle cx="9" cy="12" r="2" />
-                        <circle cx="9" cy="19" r="2" />
-                        <circle cx="15" cy="5" r="2" />
-                        <circle cx="15" cy="12" r="2" />
-                        <circle cx="15" cy="19" r="2" />
-                    </svg>
-                `;
 
                 const fileName = document.createElement("span");
                 fileName.textContent = file.name;
@@ -116,7 +104,6 @@
                     updateLiLabels();
                 });
 
-                li.appendChild(handle);
 
                 // Controles de Ordenación Numérica (Mejora para móviles)
                 const controls = document.createElement('div');

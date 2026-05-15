@@ -173,12 +173,7 @@
                 card.draggable = true;
                 card.dataset.originalIndex = i; // Guardar el índice original (1-based)
 
-                const handle = document.createElement('div');
-                handle.className = 'drag-handle';
-                handle.textContent = '⠿';
-
                 card.appendChild(canvas);
-                card.appendChild(handle);
 
                 // Controles de Ordenación Numérica (Mejora para móviles)
                 const controls = document.createElement('div');
@@ -400,12 +395,11 @@
 
         // --- Soporte para dispositivos táctiles ---
         function onTouchStart(e) {
-            // Usamos closest para detectar si el toque fue en el handle
-            const handle = e.target.closest('.drag-handle');
-            if (handle) {
-                dragSrcCard = this;
-                this.classList.add('dragging');
-            }
+            // Permitir arrastrar tocando cualquier parte de la tarjeta (excepto controles)
+            if (e.target.closest('.order-controls') || e.target.closest('button')) return;
+            
+            dragSrcCard = this;
+            this.classList.add('dragging');
         }
 
         function onTouchMove(e) {
