@@ -17,6 +17,20 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
     </script>
+    <style>
+        /* Mejora para arrastre táctil */
+        .page-card {
+            touch-action: manipulation; /* Permite scroll vertical nativo */
+            user-select: none;
+        }
+        .page-card.dragging {
+            opacity: 0.5;
+        }
+        .page-card.drag-over {
+            border: 2px dashed var(--accent-color, #4a90d9);
+            transform: scale(1.01);
+        }
+    </style>
 </head>
 
 <body>
@@ -107,6 +121,7 @@
 
         // Drag & Drop state
         let dragSrcCard = null;
+        let touchMoved = false; // Para saber si realmente hubo movimiento
 
         // Eventos del Dropzone
         dropzone.addEventListener("click", () => fileInput.click());
@@ -186,14 +201,14 @@
                 card.appendChild(label);
                 pagesGrid.appendChild(card);
 
-                // Eventos de Drag & Drop
+                // Eventos de Drag & Drop para ratón
                 card.addEventListener('dragstart', onDragStart);
                 card.addEventListener('dragover', onDragOver);
                 card.addEventListener('dragleave', onDragLeave);
                 card.addEventListener('drop', onDrop);
                 card.addEventListener('dragend', onDragEnd);
 
-                // --- Soporte para dispositivos táctiles ---
+                // --- Soporte para dispositivos táctiles (mejorado) ---
                 card.addEventListener('touchstart', onTouchStart, { passive: false });
                 card.addEventListener('touchmove', onTouchMove, { passive: false });
                 card.addEventListener('touchend', onTouchEnd);
@@ -207,7 +222,7 @@
             actionBtn.disabled = false;
         }
 
-        // --- Lógica de Drag & Drop ---
+        // --- Lógica de Drag & Drop para ratón ---
         function onDragStart(e) {
             dragSrcCard = this;
             this.classList.add('dragging');
@@ -229,10 +244,8 @@
         function onDrop(e) {
             e.stopPropagation();
             if (dragSrcCard !== this) {
-                // Obtener posición relativa para saber si insertar antes o después
                 const rect = this.getBoundingClientRect();
                 const midX = rect.left + rect.width / 2;
-                
                 if (e.clientX < midX) {
                     pagesGrid.insertBefore(dragSrcCard, this);
                 } else {
@@ -253,6 +266,58 @@
             cards.forEach((card, idx) => {
                 card.querySelector('.page-label').textContent = `Posición ${idx + 1}`;
             });
+        }
+
+        // --- Lógica táctil mejorada ---
+        function onTouchStart(e) {
+            // Prevenir comportamiento por defecto (scroll, zoom)
+            e.preventDefault();
+            dragSrcCard = this;
+            touchMoved = false;
+            this.classList.add('dragging');
+        }
+
+        function onTouchMove(e) {
+            if (!dragSrcCard) return;
+            e.preventDefault(); // Evita scroll mientras se arrastra
+            touchMoved = true;
+
+            const touch = e.touches[0];
+            
+            // Ocultar temporalmente el elemento arrastrado para buscar debajo
+            dragSrcCard.style.pointerEvents = 'none';
+            let targetElem = document.elementFromPoint(touch.clientX, touch.clientY);
+            dragSrcCard.style.pointerEvents = '';
+            
+            // Subir hasta encontrar una .page-card válida
+            while (targetElem && targetElem !== pagesGrid) {
+                if (targetElem.classList?.contains('page-card') && targetElem !== dragSrcCard) {
+                    break;
+                }
+                targetElem = targetElem.parentElement;
+            }
+            
+            const cardTarget = targetElem && targetElem.classList?.contains('page-card') ? targetElem : null;
+            
+            if (cardTarget && cardTarget !== dragSrcCard) {
+                const rect = cardTarget.getBoundingClientRect();
+                const midX = rect.left + rect.width / 2;
+                if (touch.clientX < midX) {
+                    pagesGrid.insertBefore(dragSrcCard, cardTarget);
+                } else {
+                    pagesGrid.insertBefore(dragSrcCard, cardTarget.nextSibling);
+                }
+                updateLabels();
+            }
+        }
+
+        function onTouchEnd(e) {
+            if (dragSrcCard) {
+                dragSrcCard.classList.remove('dragging');
+                dragSrcCard = null;
+            }
+            // Limpiar clases de arrastre en todas las tarjetas
+            document.querySelectorAll('.page-card').forEach(c => c.classList.remove('drag-over', 'dragging'));
         }
 
         // --- Resetear ---
@@ -333,51 +398,6 @@
             previewPanel.style.display = "none";
             pendingBlob = null;
         });
-
-        // --- Soporte para dispositivos táctiles ---
-        function onTouchStart(e) {
-            dragSrcCard = this;
-            this.classList.add('dragging');
-            // Solo prevenir default si estamos tocando el handle o si queremos permitir drag en toda la card
-            // e.preventDefault(); 
-        }
-
-        function onTouchMove(e) {
-            if (!dragSrcCard) return;
-            
-            // Prevenir scroll mientras se arrastra
-            e.preventDefault();
-
-            const touch = e.touches[0];
-            // Encontrar el elemento bajo el dedo
-            const target = document.elementFromPoint(touch.clientX, touch.clientY);
-            
-            // Subir por el DOM hasta encontrar una page-card
-            let cardTarget = target;
-            while (cardTarget && !cardTarget.classList.contains('page-card')) {
-                cardTarget = cardTarget.parentElement;
-            }
-
-            if (cardTarget && cardTarget.classList.contains('page-card') && cardTarget !== dragSrcCard) {
-                const rect = cardTarget.getBoundingClientRect();
-                const midX = rect.left + rect.width / 2;
-
-                if (touch.clientX < midX) {
-                    pagesGrid.insertBefore(dragSrcCard, cardTarget);
-                } else {
-                    pagesGrid.insertBefore(dragSrcCard, cardTarget.nextSibling);
-                }
-                updateLabels();
-            }
-        }
-
-        function onTouchEnd() {
-            if (dragSrcCard) {
-                dragSrcCard.classList.remove('dragging');
-                dragSrcCard = null;
-            }
-        }
-
     </script>
 </body>
 

@@ -16,6 +16,7 @@
         #list li {
             cursor: grab;
             transition: opacity 0.2s, transform 0.15s;
+            touch-action: manipulation; /* Permite scroll vertical nativo */
         }
         #list li.dragging {
             opacity: 0.4;
@@ -36,6 +37,7 @@
             user-select: none;
             min-width: 24px;
             color: var(--accent-color, #007bff);
+            touch-action: none; /* Ayuda a que el arrastre táctil no sea interrumpido */
         }
         .drag-handle-icon svg {
             width: 20px;
@@ -102,7 +104,7 @@
 
         <div id="fileList">
             <h3 style="margin-bottom: 6px; color: var(--h1-color); font-weight: 600;">Archivos cargados:</h3>
-            <p class="hint-text">💡 Una vez subidos, arrastra desde el icono de la izquierda para reordenar</p>
+            <p class="hint-text">💡 Una vez subidos, arrastra desde cualquier parte del elemento para reordenar</p>
             <ul id="list"></ul>
         </div>
 
@@ -123,6 +125,7 @@
 
         // Drag state para reordenar
         let dragSrcLi = null;
+        let touchMoved = false; // Para saber si realmente hubo movimiento (evita reordenar con solo tocar)
 
         dropzone.addEventListener("click", () => fileInput.click());
         dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
@@ -139,7 +142,7 @@
                 if (file.type !== "application/pdf") continue;
 
                 const li = document.createElement("li");
-                li.draggable = true;
+                li.draggable = true; // Para ratón, pero en táctil lo manejamos aparte
 
                 const handle = document.createElement("span");
                 handle.className = "drag-handle-icon";
@@ -162,7 +165,10 @@
                 deleteBtn.innerHTML = "X";
                 deleteBtn.className = "delete-btn";
                 deleteBtn.title = "Eliminar";
-                deleteBtn.addEventListener("click", () => list.removeChild(li));
+                deleteBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    list.removeChild(li);
+                });
 
                 li.appendChild(handle);
                 li.appendChild(fileName);
@@ -172,8 +178,8 @@
                 // Guardar referencia al File en el WeakMap
                 fileMap.set(li, file);
 
-                // Eventos drag & drop para reordenar
-                li.addEventListener("dragstart", () => {
+                // Eventos drag & drop para ratón
+                li.addEventListener("dragstart", (e) => {
                     dragSrcLi = li;
                     setTimeout(() => li.classList.add("dragging"), 0);
                 });
@@ -200,11 +206,71 @@
                     }
                 });
 
-                // --- Soporte para dispositivos táctiles ---
+                // --- Soporte para dispositivos táctiles (mejorado) ---
                 li.addEventListener("touchstart", onTouchStart, { passive: false });
                 li.addEventListener("touchmove", onTouchMove, { passive: false });
                 li.addEventListener("touchend", onTouchEnd);
             }
+        }
+
+        // --- Funciones táctiles mejoradas ---
+        function onTouchStart(e) {
+            // Si el toque fue sobre el botón eliminar, no iniciamos arrastre
+            let target = e.target;
+            while (target && target !== this) {
+                if (target.classList && target.classList.contains('delete-btn')) {
+                    return;
+                }
+                target = target.parentElement;
+            }
+            // Prevenir comportamiento por defecto (scroll, selección de texto)
+            e.preventDefault();
+            dragSrcLi = this;
+            touchMoved = false;
+            // Añadir clase visual
+            setTimeout(() => this.classList.add("dragging"), 0);
+        }
+
+        function onTouchMove(e) {
+            if (!dragSrcLi) return;
+            e.preventDefault(); // Evita scroll mientras se arrastra
+            touchMoved = true;
+
+            const touch = e.touches[0];
+            
+            // Ocultar temporalmente el elemento arrastrado para buscar debajo
+            dragSrcLi.style.pointerEvents = 'none';
+            let targetElem = document.elementFromPoint(touch.clientX, touch.clientY);
+            dragSrcLi.style.pointerEvents = '';
+            
+            // Subir hasta encontrar un <li> válido
+            while (targetElem && targetElem !== list) {
+                if (targetElem.tagName === "LI" && targetElem !== dragSrcLi) {
+                    break;
+                }
+                targetElem = targetElem.parentElement;
+            }
+            
+            const liTarget = targetElem && targetElem.tagName === "LI" ? targetElem : null;
+            
+            if (liTarget && liTarget !== dragSrcLi) {
+                const rect = liTarget.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+                if (touch.clientY < midY) {
+                    list.insertBefore(dragSrcLi, liTarget);
+                } else {
+                    list.insertBefore(dragSrcLi, liTarget.nextSibling);
+                }
+            }
+        }
+
+        function onTouchEnd(e) {
+            if (dragSrcLi) {
+                dragSrcLi.classList.remove("dragging");
+                dragSrcLi = null;
+            }
+            // Si no hubo movimiento, no hacemos nada extra
+            touchMoved = false;
         }
 
         // Unir PDFs respetando el orden actual del DOM
@@ -256,49 +322,6 @@
                 mergeBtn.disabled = false;
             }
         });
-
-        // --- Soporte para dispositivos táctiles ---
-        function onTouchStart(e) {
-            dragSrcLi = this;
-            // No prevenimos default aquí para permitir scroll si no se toca el handle
-            // (aunque el handle tiene touch-action: none en CSS)
-            setTimeout(() => this.classList.add("dragging"), 0);
-        }
-
-        function onTouchMove(e) {
-            if (!dragSrcLi) return;
-
-            // Prevenir scroll si estamos arrastrando
-            e.preventDefault();
-
-            const touch = e.touches[0];
-            const target = document.elementFromPoint(touch.clientX, touch.clientY);
-
-            // Subir por el DOM hasta encontrar un LI
-            let liTarget = target;
-            while (liTarget && liTarget.tagName !== "LI") {
-                liTarget = liTarget.parentElement;
-            }
-
-            if (liTarget && liTarget.tagName === "LI" && liTarget !== dragSrcLi) {
-                const rect = liTarget.getBoundingClientRect();
-                const midY = rect.top + rect.height / 2;
-
-                if (touch.clientY < midY) {
-                    list.insertBefore(dragSrcLi, liTarget);
-                } else {
-                    list.insertBefore(dragSrcLi, liTarget.nextSibling);
-                }
-            }
-        }
-
-        function onTouchEnd() {
-            if (dragSrcLi) {
-                dragSrcLi.classList.remove("dragging");
-                dragSrcLi = null;
-            }
-        }
-
     </script>
 </body>
 
