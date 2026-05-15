@@ -1,0 +1,44 @@
+{
+    "name": "PDF Tools Suite",
+    "short_name": "PDF Tools",
+    "description": "Suite de herramientas PDF offline: unir, dividir, girar, comprimir y mucho más.",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#1a1a2e",
+    "theme_color": "#1a1a2e",
+    "orientation": "any",
+    "scope": "./",
+    "lang": "es",
+    "icons": [
+        {
+            "src": "icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Unir PDF",
+            "url": "./UnirPDF.html",
+            "description": "Combina múltiples PDFs en uno"
+        },
+        {
+            "name": "Dividir PDF",
+            "url": "./DividirPDF.html",
+            "description": "Divide o extrae páginas de un PDF"
+        },
+        {
+            "name": "Girar PDF",
+            "url": "./GirarPDF.html",
+            "description": "Rota las páginas de un PDF"
+        }
+    ],
+    "prefer_related_applications": false
+}

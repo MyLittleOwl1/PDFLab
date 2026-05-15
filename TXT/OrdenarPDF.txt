@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordenar Páginas PDF en el Navegador</title>
+
+    <!-- PDF.js para generar miniaturas -->
+    <script src="pdf.min.js"></script>
+    <!-- PDF-LIB para reordenar y guardar -->
+    <script src="pdf-lib.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+    <script src="theme.js"></script>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+    </script>
+</head>
+
+<body>
+
+    <header>
+        <h1>Ordenar Páginas PDF</h1>
+        <button class="theme-toggle" id="themeToggle" title="Alternar modo oscuro">
+            <svg id="moonIcon" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <svg id="sunIcon" viewBox="0 0 24 24" style="display: none;">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="back-link-container">
+            <a href="index.html" class="back-link">
+                <svg viewBox="0 0 24 24">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al menú
+            </a>
+        </div>
+
+        <div id="dropzone">
+            Arrastra y suelta tu archivo PDF aquí<br>o haz clic para seleccionar
+            <input type="file" id="fileInput" accept="application/pdf" style="display: none;">
+        </div>
+
+        <!-- Panel de info y controles -->
+        <div id="pagesContainer">
+            <div class="panel">
+                <div class="file-item">
+                    <span id="fileNameDisplay">documento.pdf</span>
+                    <span style="font-size: 14px; opacity: 0.8; margin-left: auto; margin-right: 15px;" id="pageCountDisplay"></span>
+                    <button class="delete-btn" id="removeFileBtn" title="Eliminar archivo">X</button>
+                </div>
+                <p style="font-size: 13px; color: var(--text-color); opacity: 0.8; margin-top: 12px; margin-bottom: 0;">
+                    🖱️ Arrastra las miniaturas para cambiar el orden de las páginas. El número inferior indica su posición actual.
+                </p>
+            </div>
+
+            <!-- Cuadrícula de páginas -->
+            <div id="pagesGrid"></div>
+
+            <button id="actionBtn">Guardar PDF Reordenado y Ver Previsualización</button>
+
+            <!-- Panel de Previsualización Final -->
+            <div id="previewPanel">
+                <div class="preview-inner">
+                    <h3>Vista previa del nuevo orden (página 1)</h3>
+                    <canvas id="previewCanvasFinal"></canvas>
+                    <p style="font-size: 12px; opacity: 0.6; margin-top: 8px; color: var(--text-color);">Verifica que el orden es el correcto antes de descargar.</p>
+                    <div class="preview-actions">
+                        <button class="btn-download" id="downloadBtn">⬇ Descargar PDF</button>
+                        <button class="btn-cancel" id="cancelPreviewBtn">✕ Seguir editando</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Ordenar PDF Logic ---
+        const dropzone = document.getElementById("dropzone");
+        const fileInput = document.getElementById("fileInput");
+        const pagesContainer = document.getElementById("pagesContainer");
+        const pagesGrid = document.getElementById("pagesGrid");
+        const fileNameDisplay = document.getElementById("fileNameDisplay");
+        const removeFileBtn = document.getElementById("removeFileBtn");
+        const actionBtn = document.getElementById("actionBtn");
+        const pageCountDisplay = document.getElementById("pageCountDisplay");
+
+        let currentFile = null;
+        let fileBytes = null;
+        let pdfJsDoc = null;
+
+        // Drag & Drop state
+        let dragSrcCard = null;
+
+        // Eventos del Dropzone
+        dropzone.addEventListener("click", () => fileInput.click());
+        dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+        dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+        dropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropzone.classList.remove("dragover");
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener("change", (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+
+        async function handleFile(file) {
+            if (file.type !== "application/pdf") {
+                alert("Por favor, sube solo archivos PDF.");
+                return;
+            }
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                fileBytes = arrayBuffer;
+                currentFile = file;
+
+                // Cargar con pdf.js para las miniaturas
+                pdfJsDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const numPages = pdfJsDoc.numPages;
+
+                // Actualizar UI
+                fileNameDisplay.textContent = file.name;
+                pageCountDisplay.textContent = `(${numPages} páginas)`;
+
+                dropzone.style.display = "none";
+                pagesContainer.style.display = "block";
+
+                // Renderizar miniaturas
+                await renderThumbnails(numPages);
+
+            } catch (error) {
+                alert("Error al leer el PDF. Puede que esté protegido o corrupto.");
+                console.error(error);
+            }
+        }
+
+        async function renderThumbnails(numPages) {
+            pagesGrid.innerHTML = '';
+            actionBtn.textContent = `Cargando miniaturas... (0/${numPages})`;
+            actionBtn.disabled = true;
+
+            for (let i = 1; i <= numPages; i++) {
+                const page = await pdfJsDoc.getPage(i);
+                const viewport = page.getViewport({ scale: 0.35 });
+
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+                // Crear tarjeta
+                const card = document.createElement('div');
+                card.className = 'page-card';
+                card.draggable = true;
+                card.dataset.originalIndex = i; // Guardar el índice original (1-based)
+
+                const handle = document.createElement('div');
+                handle.className = 'drag-handle';
+                handle.textContent = '⠿';
+
+                const label = document.createElement('div');
+                label.className = 'page-label';
+                label.textContent = `Página ${i}`;
+
+                card.appendChild(canvas);
+                card.appendChild(handle);
+                card.appendChild(label);
+                pagesGrid.appendChild(card);
+
+                // Eventos de Drag & Drop
+                card.addEventListener('dragstart', onDragStart);
+                card.addEventListener('dragover', onDragOver);
+                card.addEventListener('dragleave', onDragLeave);
+                card.addEventListener('drop', onDrop);
+                card.addEventListener('dragend', onDragEnd);
+
+                // --- Soporte para dispositivos táctiles ---
+                card.addEventListener('touchstart', onTouchStart, { passive: false });
+                card.addEventListener('touchmove', onTouchMove, { passive: false });
+                card.addEventListener('touchend', onTouchEnd);
+
+                actionBtn.textContent = `Cargando miniaturas... (${i}/${numPages})`;
+            }
+
+            // Actualizar etiquetas de posición
+            updateLabels();
+            actionBtn.textContent = "Guardar PDF Reordenado";
+            actionBtn.disabled = false;
+        }
+
+        // --- Lógica de Drag & Drop ---
+        function onDragStart(e) {
+            dragSrcCard = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function onDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (this !== dragSrcCard) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        function onDragLeave() {
+            this.classList.remove('drag-over');
+        }
+
+        function onDrop(e) {
+            e.stopPropagation();
+            if (dragSrcCard !== this) {
+                // Obtener posición relativa para saber si insertar antes o después
+                const rect = this.getBoundingClientRect();
+                const midX = rect.left + rect.width / 2;
+                
+                if (e.clientX < midX) {
+                    pagesGrid.insertBefore(dragSrcCard, this);
+                } else {
+                    pagesGrid.insertBefore(dragSrcCard, this.nextSibling);
+                }
+                updateLabels();
+            }
+            this.classList.remove('drag-over');
+        }
+
+        function onDragEnd() {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.page-card').forEach(c => c.classList.remove('drag-over'));
+        }
+
+        function updateLabels() {
+            const cards = pagesGrid.querySelectorAll('.page-card');
+            cards.forEach((card, idx) => {
+                card.querySelector('.page-label').textContent = `Posición ${idx + 1}`;
+            });
+        }
+
+        // --- Resetear ---
+        removeFileBtn.addEventListener("click", () => {
+            currentFile = null;
+            fileBytes = null;
+            pdfJsDoc = null;
+            fileInput.value = "";
+            pagesGrid.innerHTML = "";
+            dropzone.style.display = "block";
+            pagesContainer.style.display = "none";
+        });
+
+        // --- Guardar PDF Reordenado ---
+        const previewPanel = document.getElementById("previewPanel");
+        const previewCanvasFinal = document.getElementById("previewCanvasFinal");
+        const downloadBtn = document.getElementById("downloadBtn");
+        const cancelPreviewBtn = document.getElementById("cancelPreviewBtn");
+        let pendingBlob = null;
+
+        actionBtn.addEventListener("click", async () => {
+            if (!fileBytes) return;
+
+            actionBtn.disabled = true;
+            actionBtn.textContent = "Generando PDF...";
+
+            try {
+                // Obtener el orden actual de las tarjetas (índices originales, 1-based)
+                const cards = pagesGrid.querySelectorAll('.page-card');
+                const newOrder = Array.from(cards).map(c => parseInt(c.dataset.originalIndex) - 1); // Convertir a 0-based
+
+                // Cargar documento con pdf-lib para reorganizar
+                const pdfDoc = await PDFLib.PDFDocument.load(fileBytes);
+                const newPdfDoc = await PDFLib.PDFDocument.create();
+
+                const copiedPages = await newPdfDoc.copyPages(pdfDoc, newOrder);
+                copiedPages.forEach(page => newPdfDoc.addPage(page));
+
+                const pdfBytes = await newPdfDoc.save();
+                pendingBlob = new Blob([pdfBytes], { type: "application/pdf" });
+
+                // Mostrar previsualización de la nueva primera página
+                const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+                const newPdfJsDoc = await loadingTask.promise;
+                const firstPage = await newPdfJsDoc.getPage(1);
+                const viewport = firstPage.getViewport({ scale: 1.2 });
+                previewCanvasFinal.width = viewport.width;
+                previewCanvasFinal.height = viewport.height;
+                await firstPage.render({ canvasContext: previewCanvasFinal.getContext('2d'), viewport }).promise;
+
+                previewPanel.style.display = "block";
+                previewPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                actionBtn.disabled = false;
+                actionBtn.textContent = "Actualizar Previsualización";
+
+            } catch (error) {
+                alert("Error al generar el PDF reordenado.");
+                console.error(error);
+                actionBtn.disabled = false;
+                actionBtn.textContent = "Guardar PDF Reordenado";
+            }
+        });
+
+        downloadBtn.addEventListener("click", () => {
+            if (!pendingBlob) return;
+            const url = URL.createObjectURL(pendingBlob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Reordenado_${currentFile.name}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        cancelPreviewBtn.addEventListener("click", () => {
+            previewPanel.style.display = "none";
+            pendingBlob = null;
+        });
+
+        // --- Soporte para dispositivos táctiles ---
+        function onTouchStart(e) {
+            dragSrcCard = this;
+            this.classList.add('dragging');
+            // Solo prevenir default si estamos tocando el handle o si queremos permitir drag en toda la card
+            // e.preventDefault(); 
+        }
+
+        function onTouchMove(e) {
+            if (!dragSrcCard) return;
+            
+            // Prevenir scroll mientras se arrastra
+            e.preventDefault();
+
+            const touch = e.touches[0];
+            // Encontrar el elemento bajo el dedo
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            // Subir por el DOM hasta encontrar una page-card
+            let cardTarget = target;
+            while (cardTarget && !cardTarget.classList.contains('page-card')) {
+                cardTarget = cardTarget.parentElement;
+            }
+
+            if (cardTarget && cardTarget.classList.contains('page-card') && cardTarget !== dragSrcCard) {
+                const rect = cardTarget.getBoundingClientRect();
+                const midX = rect.left + rect.width / 2;
+
+                if (touch.clientX < midX) {
+                    pagesGrid.insertBefore(dragSrcCard, cardTarget);
+                } else {
+                    pagesGrid.insertBefore(dragSrcCard, cardTarget.nextSibling);
+                }
+                updateLabels();
+            }
+        }
+
+        function onTouchEnd() {
+            if (dragSrcCard) {
+                dragSrcCard.classList.remove('dragging');
+                dragSrcCard = null;
+            }
+        }
+
+    </script>
+</body>
+
+</html>

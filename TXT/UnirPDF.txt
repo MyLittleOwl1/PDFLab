@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unir PDFs en el Navegador</title>
+
+    <!-- PDF-LIB -->
+    <script src="pdf-lib.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="theme.js"></script>
+
+    <style>
+        /* Estilos drag & drop para los elementos de la lista */
+        #list li {
+            cursor: grab;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        #list li.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+        #list li.drag-over-li {
+            border-color: var(--accent-color, #4a90d9);
+            border-style: dashed;
+            transform: scale(1.01);
+        }
+        .drag-handle-icon {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            opacity: 0.8;
+            cursor: grab;
+            user-select: none;
+            min-width: 24px;
+            color: var(--accent-color, #007bff);
+        }
+        .drag-handle-icon svg {
+            width: 20px;
+            height: 20px;
+            display: block;
+        }
+        #list li:hover .drag-handle-icon {
+            opacity: 1;
+        }
+        #progressText {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 14px;
+            color: var(--text-color);
+            opacity: 0.8;
+            display: none;
+        }
+        .hint-text {
+            font-size: 12px;
+            opacity: 0.55;
+            color: var(--text-color);
+            margin-top: 6px;
+            margin-bottom: 0;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Unir PDFs</h1>
+        <button class="theme-toggle" id="themeToggle" title="Alternar modo oscuro">
+            <svg id="moonIcon" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <svg id="sunIcon" viewBox="0 0 24 24" style="display: none;">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="back-link-container">
+            <a href="index.html" class="back-link">
+                <svg viewBox="0 0 24 24">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al menú
+            </a>
+        </div>
+
+        <div id="dropzone">Arrastra aquí tus PDFs o haz clic para seleccionarlos</div>
+        <input type="file" id="fileInput" accept="application/pdf" multiple style="display:none">
+
+        <div id="fileList">
+            <h3 style="margin-bottom: 6px; color: var(--h1-color); font-weight: 600;">Archivos cargados:</h3>
+            <p class="hint-text">💡 Una vez subidos, arrastra desde el icono de la izquierda para reordenar</p>
+            <ul id="list"></ul>
+        </div>
+
+        <button id="mergeBtn">Unir PDFs</button>
+        <div id="progressText"></div>
+    </div>
+
+    <script>
+        // --- PDF Merge Logic ---
+        const dropzone = document.getElementById("dropzone");
+        const fileInput = document.getElementById("fileInput");
+        const list = document.getElementById("list");
+        const mergeBtn = document.getElementById("mergeBtn");
+        const progressText = document.getElementById("progressText");
+
+        // El mapa nos permite recuperar el File original a partir del elemento <li> del DOM
+        const fileMap = new WeakMap();
+
+        // Drag state para reordenar
+        let dragSrcLi = null;
+
+        dropzone.addEventListener("click", () => fileInput.click());
+        dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+        dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+        dropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropzone.classList.remove("dragover");
+            addFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener("change", (e) => addFiles(e.target.files));
+
+        function addFiles(files) {
+            for (let file of files) {
+                if (file.type !== "application/pdf") continue;
+
+                const li = document.createElement("li");
+                li.draggable = true;
+
+                const handle = document.createElement("span");
+                handle.className = "drag-handle-icon";
+                handle.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="9" cy="5" r="2" />
+                        <circle cx="9" cy="12" r="2" />
+                        <circle cx="9" cy="19" r="2" />
+                        <circle cx="15" cy="5" r="2" />
+                        <circle cx="15" cy="12" r="2" />
+                        <circle cx="15" cy="19" r="2" />
+                    </svg>
+                `;
+
+                const fileName = document.createElement("span");
+                fileName.textContent = file.name;
+                fileName.style.flex = "1";
+
+                const deleteBtn = document.createElement("button");
+                deleteBtn.innerHTML = "X";
+                deleteBtn.className = "delete-btn";
+                deleteBtn.title = "Eliminar";
+                deleteBtn.addEventListener("click", () => list.removeChild(li));
+
+                li.appendChild(handle);
+                li.appendChild(fileName);
+                li.appendChild(deleteBtn);
+                list.appendChild(li);
+
+                // Guardar referencia al File en el WeakMap
+                fileMap.set(li, file);
+
+                // Eventos drag & drop para reordenar
+                li.addEventListener("dragstart", () => {
+                    dragSrcLi = li;
+                    setTimeout(() => li.classList.add("dragging"), 0);
+                });
+                li.addEventListener("dragend", () => {
+                    li.classList.remove("dragging");
+                    document.querySelectorAll("#list li").forEach(el => el.classList.remove("drag-over-li"));
+                });
+                li.addEventListener("dragover", (e) => {
+                    e.preventDefault();
+                    if (li !== dragSrcLi) li.classList.add("drag-over-li");
+                });
+                li.addEventListener("dragleave", () => li.classList.remove("drag-over-li"));
+                li.addEventListener("drop", (e) => {
+                    e.stopPropagation();
+                    li.classList.remove("drag-over-li");
+                    if (dragSrcLi && dragSrcLi !== li) {
+                        const rect = li.getBoundingClientRect();
+                        const midY = rect.top + rect.height / 2;
+                        if (e.clientY < midY) {
+                            list.insertBefore(dragSrcLi, li);
+                        } else {
+                            list.insertBefore(dragSrcLi, li.nextSibling);
+                        }
+                    }
+                });
+
+                // --- Soporte para dispositivos táctiles ---
+                li.addEventListener("touchstart", onTouchStart, { passive: false });
+                li.addEventListener("touchmove", onTouchMove, { passive: false });
+                li.addEventListener("touchend", onTouchEnd);
+            }
+        }
+
+        // Unir PDFs respetando el orden actual del DOM
+        mergeBtn.addEventListener("click", async () => {
+            const listItems = Array.from(list.querySelectorAll("li"));
+            if (listItems.length === 0) {
+                alert("No has añadido ningún PDF.");
+                return;
+            }
+
+            mergeBtn.disabled = true;
+            progressText.style.display = "block";
+
+            try {
+                const mergedPdf = await PDFLib.PDFDocument.create();
+                const total = listItems.length;
+
+                for (let i = 0; i < total; i++) {
+                    const file = fileMap.get(listItems[i]);
+                    progressText.textContent = `Procesando archivo ${i + 1} de ${total}: ${file.name}`;
+
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
+                    const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                    pages.forEach(p => mergedPdf.addPage(p));
+                }
+
+                progressText.textContent = "Generando PDF final...";
+                const mergedBytes = await mergedPdf.save();
+
+                const blob = new Blob([mergedBytes], { type: "application/pdf" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "PDF_Unido.pdf";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                progressText.textContent = "¡PDF unido descargado con éxito!";
+                setTimeout(() => { progressText.style.display = "none"; }, 3000);
+
+            } catch (err) {
+                alert("Error al unir los PDFs.");
+                console.error(err);
+                progressText.textContent = "Error en el proceso.";
+            } finally {
+                mergeBtn.disabled = false;
+            }
+        });
+
+        // --- Soporte para dispositivos táctiles ---
+        function onTouchStart(e) {
+            dragSrcLi = this;
+            // No prevenimos default aquí para permitir scroll si no se toca el handle
+            // (aunque el handle tiene touch-action: none en CSS)
+            setTimeout(() => this.classList.add("dragging"), 0);
+        }
+
+        function onTouchMove(e) {
+            if (!dragSrcLi) return;
+
+            // Prevenir scroll si estamos arrastrando
+            e.preventDefault();
+
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+            // Subir por el DOM hasta encontrar un LI
+            let liTarget = target;
+            while (liTarget && liTarget.tagName !== "LI") {
+                liTarget = liTarget.parentElement;
+            }
+
+            if (liTarget && liTarget.tagName === "LI" && liTarget !== dragSrcLi) {
+                const rect = liTarget.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+
+                if (touch.clientY < midY) {
+                    list.insertBefore(dragSrcLi, liTarget);
+                } else {
+                    list.insertBefore(dragSrcLi, liTarget.nextSibling);
+                }
+            }
+        }
+
+        function onTouchEnd() {
+            if (dragSrcLi) {
+                dragSrcLi.classList.remove("dragging");
+                dragSrcLi = null;
+            }
+        }
+
+    </script>
+</body>
+
+</html>

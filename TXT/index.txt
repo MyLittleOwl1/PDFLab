@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Herramientas PDF</title>
+    <meta name="description" content="Suite de herramientas PDF offline: unir, dividir, girar, comprimir, extraer texto y mucho más.">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PDF Tools">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Herramientas PDF</h1>
+        <button class="theme-toggle" id="themeToggle" title="Alternar modo oscuro">
+            <!-- Icono de luna por defecto -->
+            <svg id="moonIcon" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <!-- Icono de sol (oculto por defecto) -->
+            <svg id="sunIcon" viewBox="0 0 24 24" style="display: none;">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+    </header>
+
+    <div class="grid-container">
+
+        <!-- 1. Unir PDF (Enlazado al archivo existente) -->
+        <a href="UnirPDF.html" class="card color-red">
+            <div class="icon-container">
+                <svg viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="12" y1="18" x2="12" y2="12"></line>
+                    <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+            </div>
+            <h2>Unir PDF</h2>
+            <p>Combina múltiples PDFs en un solo documento unificado.</p>
+        </a>
+
+        <!-- 2. Dividir / Extraer PDF -->
+        <a href="DividirPDF.html" class="card color-blue">
+            <div class="icon-container">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="6" cy="6" r="3"></circle>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+                    <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+                    <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+                </svg>
+            </div>
+            <h2>Dividir / Extraer PDF</h2>
+            <p>Separa todas las páginas o extrae un rango concreto a un nuevo PDF.</p>
+        </a>
+
+        <!-- 3. Imágenes a PDF -->
+        <a href="ImgPDF.html" class="card color-green">
+            <div class="icon-container">
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+            </div>
+            <h2>Imágenes a PDF</h2>
+            <p>Convierte JPG, PNG y otras imágenes a formato PDF.</p>
+        </a>
+
+        <!-- 4. PDF a imágenes -->
+        <a href="PDFImg.html" class="card color-orange">
+            <div class="icon-container">
+                <svg viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+            </div>
+            <h2>PDF a imágenes</h2>
+            <p>Extrae cada página del PDF y guárdala como imagen.</p>
+        </a>
+
+        <!-- 5. Girar PDF -->
+        <a href="GirarPDF.html" class="card color-purple">
+            <div class="icon-container">
+                <svg viewBox="0 0 24 24">
+                    <path d="M21 2v6h-6"></path>
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                </svg>
+            </div>
+            <h2>Girar PDF</h2>
+            <p>Rota las páginas de tu documento PDF fácilmente.</p>
+        </a>
+
+        <!-- 6. Eliminar páginas PDF -->
+        <a href="EliminarPDF.html" class="card color-pink">
+            <div class="icon-container">
+                <svg viewBox="0 0 24 24">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+            </div>
+            <h2>Eliminar páginas</h2>
+            <p>Quita las páginas que no deseas mantener en tu PDF.</p>
+        </a>
+
+
+        <!-- 8. Ordenar páginas PDF -->
+        <a href="OrdenarPDF.html" class="card color-indigo">
+            <div class="icon-container">
+                <svg viewBox="0 0 24 24">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+            </div>
+            <h2>Ordenar páginas</h2>
+            <p>Cambia el orden de las páginas dentro de tu PDF.</p>
+        </a>
+
+        <!-- 9. Extraer texto del PDF -->
+        <a href="ExtraerTexto.html" class="card color-cyan">
+            <div class="icon-container">
+                <svg viewBox="0 0 24 24">
+                    <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                    <line x1="9" y1="20" x2="15" y2="20"></line>
+                    <line x1="12" y1="4" x2="12" y2="20"></line>
+                </svg>
+            </div>
+            <h2>Extraer texto</h2>
+            <p>Obtén todo el texto contenido en tu documento PDF.</p>
+        </a>
+        <!-- 10. Comprimir PDF -->
+        <a href="ComprimirPDF.html" class="card color-red">
+            <div class="icon-container">
+                <svg viewBox="0 0 24 24">
+                    <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
+                    <path d="M12 12v9"></path>
+                    <path d="m8 17 4 4 4-4"></path>
+                </svg>
+            </div>
+            <h2>Comprimir PDF</h2>
+            <p>Reduce drásticamente el peso de tus archivos PDF.</p>
+        </a>
+        <!-- 11. Marca de Agua -->
+        <a href="MarcaAgua.html" class="card color-teal">
+            <div class="icon-container">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"></path>
+                </svg>
+            </div>
+            <h2>Marca de Agua</h2>
+            <p>Añade texto personalizado (BORRADOR, CONFIDENCIAL...) a todas las páginas.</p>
+        <!-- 12. Numerar Páginas -->
+        <a href="NumerarPDF.html" class="card color-orange">
+            <div class="icon-container">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2v20M17 5H7M17 19H7" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+            </div>
+            <h2>Numerar Páginas</h2>
+            <p>Añade números de página personalizables en la posición que elijas.</p>
+        </a>
+    </div>
+
+    <script src="theme.js"></script>
+    <script>
+        // Registrar el Service Worker para habilitar modo PWA offline
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('[PWA] Service Worker registrado:', reg.scope))
+                    .catch(err => console.warn('[PWA] Error al registrar SW:', err));
+            });
+        }
+    </script>
+</body>
+
+</html>
