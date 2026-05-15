@@ -177,13 +177,38 @@
                 handle.className = 'drag-handle';
                 handle.textContent = '⠿';
 
-                const label = document.createElement('div');
-                label.className = 'page-label';
-                label.textContent = `Página ${i}`;
-
                 card.appendChild(canvas);
                 card.appendChild(handle);
-                card.appendChild(label);
+
+                // Controles de Ordenación Numérica (Mejora para móviles)
+                const controls = document.createElement('div');
+                controls.className = 'order-controls';
+
+                const btnLeft = document.createElement('button');
+                btnLeft.className = 'order-btn';
+                btnLeft.innerHTML = '←';
+                btnLeft.title = 'Mover a la izquierda';
+                btnLeft.onclick = (e) => { e.stopPropagation(); moveItem(card, -1); };
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'order-input';
+                input.value = i;
+                input.min = 1;
+                input.max = numPages; // totalPages se llama numPages aquí
+                input.onclick = (e) => e.stopPropagation();
+                input.onchange = (e) => updateOrderFromInput(card, e.target.value);
+
+                const btnRight = document.createElement('button');
+                btnRight.className = 'order-btn';
+                btnRight.innerHTML = '→';
+                btnRight.title = 'Mover a la derecha';
+                btnRight.onclick = (e) => { e.stopPropagation(); moveItem(card, 1); };
+
+                controls.appendChild(btnLeft);
+                controls.appendChild(input);
+                controls.appendChild(btnRight);
+                card.appendChild(controls);
                 pagesGrid.appendChild(card);
 
                 // Eventos de Drag & Drop
@@ -250,9 +275,51 @@
 
         function updateLabels() {
             const cards = pagesGrid.querySelectorAll('.page-card');
-            cards.forEach((card, idx) => {
-                card.querySelector('.page-label').textContent = `Posición ${idx + 1}`;
+            cards.forEach((card, index) => {
+                const input = card.querySelector('.order-input');
+                if (input) {
+                    input.value = index + 1;
+                    input.max = cards.length;
+                }
             });
+        }
+
+        // Funciones para ordenación numérica (Móviles)
+        function moveItem(card, direction) {
+            const cards = Array.from(pagesGrid.children);
+            const index = cards.indexOf(card);
+            const newIndex = index + direction;
+            
+            if (newIndex >= 0 && newIndex < cards.length) {
+                if (direction > 0) {
+                    pagesGrid.insertBefore(card, pagesGrid.children[newIndex].nextSibling);
+                } else {
+                    pagesGrid.insertBefore(card, pagesGrid.children[newIndex]);
+                }
+                updateLabels();
+            }
+        }
+
+        function updateOrderFromInput(card, newValue) {
+            const cards = Array.from(pagesGrid.children);
+            let newIndex = parseInt(newValue) - 1;
+            
+            if (isNaN(newIndex)) {
+                updateLabels();
+                return;
+            }
+            if (newIndex < 0) newIndex = 0;
+            if (newIndex >= cards.length) newIndex = cards.length - 1;
+            
+            const currentIndex = cards.indexOf(card);
+            if (newIndex === currentIndex) return;
+
+            if (newIndex > currentIndex) {
+                pagesGrid.insertBefore(card, pagesGrid.children[newIndex].nextSibling);
+            } else {
+                pagesGrid.insertBefore(card, pagesGrid.children[newIndex]);
+            }
+            updateLabels();
         }
 
         // --- Resetear ---

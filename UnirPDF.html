@@ -111,12 +111,46 @@
                 deleteBtn.innerHTML = "X";
                 deleteBtn.className = "delete-btn";
                 deleteBtn.title = "Eliminar";
-                deleteBtn.addEventListener("click", () => list.removeChild(li));
+                deleteBtn.addEventListener("click", () => {
+                    list.removeChild(li);
+                    updateLiLabels();
+                });
 
                 li.appendChild(handle);
+
+                // Controles de Ordenación Numérica (Mejora para móviles)
+                const controls = document.createElement('div');
+                controls.className = 'order-controls';
+                controls.style.width = 'auto';
+                controls.style.margin = '0 15px';
+
+                const btnUp = document.createElement('button');
+                btnUp.className = 'order-btn';
+                btnUp.innerHTML = '↑';
+                btnUp.onclick = (e) => { e.stopPropagation(); moveLi(li, -1); };
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'order-input';
+                input.value = list.children.length + 1;
+                input.min = 1;
+                input.onclick = (e) => e.stopPropagation();
+                input.onchange = (e) => updateLiFromInput(li, e.target.value);
+
+                const btnDown = document.createElement('button');
+                btnDown.className = 'order-btn';
+                btnDown.innerHTML = '↓';
+                btnDown.onclick = (e) => { e.stopPropagation(); moveLi(li, 1); };
+
+                controls.appendChild(btnUp);
+                controls.appendChild(input);
+                controls.appendChild(btnDown);
+                li.appendChild(controls);
+
                 li.appendChild(fileName);
                 li.appendChild(deleteBtn);
                 list.appendChild(li);
+                updateLiLabels();
 
                 // Guardar referencia al File en el WeakMap
                 fileMap.set(li, file);
@@ -254,6 +288,55 @@
                 dragSrcLi.classList.remove("dragging");
                 dragSrcLi = null;
             }
+        }
+
+        // Funciones para ordenación numérica (Móviles)
+        function updateLiLabels() {
+            const items = list.querySelectorAll("li");
+            items.forEach((li, index) => {
+                const input = li.querySelector(".order-input");
+                if (input) {
+                    input.value = index + 1;
+                    input.max = items.length;
+                }
+            });
+        }
+
+        function moveLi(li, direction) {
+            const items = Array.from(list.children);
+            const index = items.indexOf(li);
+            const newIndex = index + direction;
+            
+            if (newIndex >= 0 && newIndex < items.length) {
+                if (direction > 0) {
+                    list.insertBefore(li, list.children[newIndex].nextSibling);
+                } else {
+                    list.insertBefore(li, list.children[newIndex]);
+                }
+                updateLiLabels();
+            }
+        }
+
+        function updateLiFromInput(li, newValue) {
+            const items = Array.from(list.children);
+            let newIndex = parseInt(newValue) - 1;
+            
+            if (isNaN(newIndex)) {
+                updateLiLabels();
+                return;
+            }
+            if (newIndex < 0) newIndex = 0;
+            if (newIndex >= items.length) newIndex = items.length - 1;
+            
+            const currentIndex = items.indexOf(li);
+            if (newIndex === currentIndex) return;
+
+            if (newIndex > currentIndex) {
+                list.insertBefore(li, list.children[newIndex].nextSibling);
+            } else {
+                list.insertBefore(li, list.children[newIndex]);
+            }
+            updateLiLabels();
         }
 
     </script>
