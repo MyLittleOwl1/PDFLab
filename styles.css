@@ -609,6 +609,60 @@ input[type="color"] {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
+.preview-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+@media (max-width: 600px) {
+    .options-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Estilos de MarcaAgua.html */
+.option-group input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent-color, #4a90d9);
+}
+
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.slider-row span {
+    min-width: 38px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.preview-box {
+    border: 1px solid var(--file-item-border);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    padding: 12px;
+    margin-top: 16px;
+    text-align: center;
+}
+
+.preview-box canvas {
+    max-width: 100%;
+    border-radius: 4px;
+}
+
+.preview-label {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-top: 6px;
+    color: var(--text-color);
+}
+
+
 /* Estilos de OrdenarPDF.html */
 #pagesGrid {
     display: grid;
